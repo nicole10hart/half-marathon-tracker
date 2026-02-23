@@ -7,7 +7,7 @@
   background: rgba(4, 4, 10, 0.88);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  z-index: 300;
+  z-index: var(--z-modal);
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -135,7 +135,7 @@ textarea {
    TOAST NOTIFICATIONS
 ============================================================ */
 #toast-wrap {
-  position: fixed; bottom: 24px; right: 20px; z-index: 500;
+  position: fixed; bottom: 24px; right: 20px; z-index: var(--z-toast);
   display: flex; flex-direction: column-reverse; gap: 8px;
   pointer-events: none; max-width: 300px;
 }

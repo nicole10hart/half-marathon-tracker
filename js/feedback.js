@@ -1,19 +1,19 @@
 import { parseDate, dStr } from './utils.js';
 
 export const COMPLETE_MSGS = [
-  '🔥 Run logged! Keep that momentum going.',
-  '💪 Crushed it! Every mile builds your base.',
-  '⚡ Strong work — you\'re getting faster.',
-  '🌟 Done! Consistency is your superpower.',
-  '🎯 Nailed it! One step closer to race day.',
-  '🏃 Logged! Your future self thanks you.',
+  'Run logged! Keep that momentum going.',
+  'Crushed it! Every mile builds your base.',
+  'Strong work — you\'re getting faster.',
+  'Done! Consistency is your superpower.',
+  'Nailed it! One step closer to race day.',
+  'Logged! Your future self thanks you.',
 ];
 export const SKIP_MSGS = [
-  '😬 Skipped. Life happens — don\'t make it a habit.',
-  '⚠️ Missed it. Push harder next time.',
-  '💤 Skipped. Every missed run costs fitness.',
-  '🤞 Skipped. Come back stronger tomorrow.',
-  '❗ Missed it. Stay focused on race day.',
+  'Skipped. Life happens — don\'t make it a habit.',
+  'Missed it. Push harder next time.',
+  'Skipped. Every missed run costs fitness.',
+  'Skipped. Come back stronger tomorrow.',
+  'Missed it. Stay focused on race day.',
 ];
 
 export function randMsg(arr) { return arr[Math.floor(Math.random() * arr.length)]; }

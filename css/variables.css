@@ -37,4 +37,9 @@
   --radius:   12px;
   --radius-s: 8px;
   --shadow:   0 12px 40px rgba(0, 0, 0, 0.6);
+
+  --z-nav:    100;
+  --z-setup:  200;
+  --z-modal:  300;
+  --z-toast:  500;
 }

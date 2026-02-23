@@ -2,7 +2,7 @@ import { state, saveState } from './state.js';
 import { dStr, fmtPace } from './utils.js';
 import { getCurrentWeek, getPlanTotalWeeks } from './plan-generator.js';
 import { renderPlanHTML, setupDragListeners } from './render-plan.js';
-import { renderStatsHTML, animateRing } from './render-stats.js';
+import { renderStatsHTML } from './render-stats.js';
 // render-setup imported lazily to avoid circular dependency at module init time
 // (render-setup.js calls renderApp via dynamic import)
 
@@ -17,11 +17,10 @@ function renderTodayHTML() {
 
   const runSection = todayRuns.length
     ? todayRuns.map(r => {
-        const statusCls = r.completed ? 'today-run-done' : r.skipped ? 'today-run-skip' : '';
         const statusLabel = r.completed ? 'Completed' : r.skipped ? 'Skipped' : 'Scheduled';
         const statusColor = r.completed ? 'var(--green)' : r.skipped ? 'var(--red)' : 'var(--orange)';
         return `
-          <div class="today-run-card ${statusCls}" onclick="openModal('${r.id}')">
+          <div class="today-run-card" onclick="openModal('${r.id}')">
             <div class="today-run-type ct-${r.type}">${r.label}</div>
             <div class="today-run-meta">${r.distance} mi &nbsp;·&nbsp; ${fmtPace(r.actualPace ?? r.estimatedPace)}</div>
             <div class="today-run-status" style="color:${statusColor}">${statusLabel}</div>
@@ -110,7 +109,6 @@ export function renderMainContent() {
     main.innerHTML = renderTodayHTML();
   } else {
     main.innerHTML = renderStatsHTML();
-    animateRing();
   }
 }
 

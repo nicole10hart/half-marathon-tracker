@@ -57,9 +57,45 @@ export function getStats() {
   return { total, completed, skipped, upcoming, milesComp, milesAll, streak, weeks, halfSecs, stravaVerified, stravaStreak, avgHR, highHR, lowAvgHR };
 }
 
+function ctStatsCardHTML() {
+  const ct = state.crossTraining;
+  if (!ct?.length) return '';
+  const totalSessions = ct.length;
+  const totalMins = ct.reduce((s, x) => s + (x.duration || 0), 0);
+  const breakdown = CT_TYPES.map(t => {
+    const entries = ct.filter(x => x.type === t);
+    if (!entries.length) return '';
+    const mins = entries.reduce((s, x) => s + (x.duration || 0), 0);
+    return `
+      <div class="tb-item">
+        <div class="tb-type" style="color:#38bdf8">${t}</div>
+        <div class="tb-count">${entries.length}</div>
+        <div class="tb-mi">${mins ? `${mins} min` : '—'}</div>
+      </div>`;
+  }).join('');
+  return `
+    <div class="stats-card" style="border-color:rgba(56,189,248,0.25)">
+      <div class="sc-title" style="color:#38bdf8">Cross Training</div>
+      <div class="stat-bubbles" style="margin-bottom:14px">
+        <div class="stat-bubble">
+          <div class="sb-val" style="color:#38bdf8">${totalSessions}</div>
+          <div class="sb-lbl">sessions</div>
+        </div>
+        <div class="stat-bubble">
+          <div class="sb-val" style="color:#38bdf8">${totalMins}</div>
+          <div class="sb-lbl">total min</div>
+        </div>
+        ${totalMins && totalSessions ? `
+        <div class="stat-bubble">
+          <div class="sb-val" style="color:#38bdf8">${Math.round(totalMins / totalSessions)}</div>
+          <div class="sb-lbl">avg min</div>
+        </div>` : ''}
+      </div>
+      <div class="type-breakdown">${breakdown}</div>
+    </div>`;
+}
+
 export function renderStatsHTML() {
-  // Ensure filterRunLog is on window — belt-and-suspenders in case of module load ordering
-  window.filterRunLog = filterRunLog;
   const stats = getStats();
   const pct = stats.total ? Math.round((stats.completed / stats.total) * 100) : 0;
 
@@ -214,42 +250,7 @@ export function renderStatsHTML() {
         ${hrTimeSeriesSVG(hrSeries)}` : ''}
       </div>` : ''}
 
-      ${(state.crossTraining?.length) ? (() => {
-        const ct = state.crossTraining;
-        const totalSessions = ct.length;
-        const totalMins = ct.reduce((s,x) => s + (x.duration||0), 0);
-        const breakdown = CT_TYPES.map(t => {
-          const entries = ct.filter(x => x.type === t);
-          if (!entries.length) return '';
-          const mins = entries.reduce((s,x) => s + (x.duration||0), 0);
-          return `
-            <div class="tb-item">
-              <div class="tb-type" style="color:#38bdf8">${t}</div>
-              <div class="tb-count">${entries.length}</div>
-              <div class="tb-mi">${mins ? `${mins} min` : '—'}</div>
-            </div>`;
-        }).join('');
-        return `
-        <div class="stats-card" style="border-color:rgba(56,189,248,0.25)">
-          <div class="sc-title" style="color:#38bdf8">Cross Training</div>
-          <div class="stat-bubbles" style="margin-bottom:14px">
-            <div class="stat-bubble">
-              <div class="sb-val" style="color:#38bdf8">${totalSessions}</div>
-              <div class="sb-lbl">sessions</div>
-            </div>
-            <div class="stat-bubble">
-              <div class="sb-val" style="color:#38bdf8">${totalMins}</div>
-              <div class="sb-lbl">total min</div>
-            </div>
-            ${totalMins && totalSessions ? `
-            <div class="stat-bubble">
-              <div class="sb-val" style="color:#38bdf8">${Math.round(totalMins/totalSessions)}</div>
-              <div class="sb-lbl">avg min</div>
-            </div>` : ''}
-          </div>
-          <div class="type-breakdown">${breakdown}</div>
-        </div>`;
-      })() : ''}
+      ${ctStatsCardHTML()}
 
       <div class="stats-card">
         <div class="run-log-header">
@@ -383,14 +384,3 @@ export function filterRunLog(type) {
   });
 }
 
-export function animateRing() {
-  requestAnimationFrame(() => setTimeout(() => {
-    const ring = document.getElementById('ring-circle');
-    if (!ring) return;
-    const stats = getStats();
-    const pct   = stats.total ? stats.completed / stats.total : 0;
-    const R     = 54;
-    const circ  = 2 * Math.PI * R;
-    ring.style.strokeDashoffset = (circ * (1 - pct)).toFixed(2);
-  }, 80));
-}

@@ -17,14 +17,10 @@
   .rl-spacer { display: none; }
   .rl-planned { display: none; }
 }
-/* Tab labels: hide abbreviated form by default, show full text */
-.tab-abbr { display: none; }
-.tab-full  { display: inline; }
 
 @media (max-width: 540px) {
   .nav-tab { padding: 4px 12px; font-size: 0.82rem; }
   .btn-txt { display: none; }
-  /* Switch to abbreviated tab labels so 3 tabs fit alongside brand + right buttons */
   .tab-abbr { display: inline; }
   .tab-full  { display: none; }
   /* Today view: 4-col week stats → 2×2 on very narrow */

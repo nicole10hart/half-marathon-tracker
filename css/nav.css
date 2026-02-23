@@ -1,7 +1,7 @@
 nav {
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: var(--z-nav);
   height: 60px;
   background: rgba(8, 8, 15, 0.92);
   backdrop-filter: blur(24px);
@@ -56,6 +56,10 @@ nav {
 }
 .nav-tab:hover { background: var(--border); color: var(--t1); }
 .nav-tab.active { background: var(--o-dim); color: var(--orange); }
+
+/* Tab label abbreviation — swapped at ≤540px in responsive.css */
+.tab-abbr { display: none; }
+.tab-full  { display: inline; }
 
 .nav-right {
   display: flex;

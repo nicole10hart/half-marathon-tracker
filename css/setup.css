@@ -6,7 +6,7 @@
   inset: 0;
   background: rgba(5, 5, 12, 0.97);
   backdrop-filter: blur(12px);
-  z-index: 200;
+  z-index: var(--z-setup);
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -81,7 +81,6 @@ input:focus, select:focus, textarea:focus {
   box-shadow: 0 0 0 3px var(--o-dim);
 }
 input::placeholder, textarea::placeholder { color: var(--t3); }
-select option { background: var(--bg4); }
 
 .form-hint { font-size: 0.72rem; color: var(--t3); margin-top: 1px; }
 
