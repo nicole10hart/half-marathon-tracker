@@ -244,9 +244,9 @@ function hrTimeSeriesSVG(series) {
   const endDate   = parseDate(planDates[planDates.length - 1]);
   const totalDays = Math.max(Math.round((endDate - startDate) / 86400000), 1);
 
-  // Fixed logical viewport — SVG fills card width via width="100%"
-  const LW = 1000, PAD = 20;
-  const H = 90, PT = 18, PB = 18;
+  // Logical viewport — width="100%" with no height lets SVG auto-size proportionally
+  const LW = 600, PAD = 20;
+  const H = 65, PT = 12, PB = 14;
   const plotH = H - PT - PB;
 
   const dateToX = dateStr => {
@@ -268,7 +268,7 @@ function hrTimeSeriesSVG(series) {
     const lbl = cur.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     ticks.push(`
       <line x1="${x}" y1="${PT}" x2="${x}" y2="${PT + plotH}" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
-      <text x="${x}" y="${H - 2}" text-anchor="middle" fill="#475569" font-size="9" font-family="system-ui">${lbl}</text>`);
+      <text x="${x}" y="${H - 2}" text-anchor="middle" fill="#475569" font-size="6" font-family="system-ui">${lbl}</text>`);
     cur.setDate(cur.getDate() + 7);
   }
 
@@ -279,11 +279,11 @@ function hrTimeSeriesSVG(series) {
     const cy    = py(r.avgHR).toFixed(1);
     const color = TYPE_COLORS[r.type] || '#94a3b8';
     return `
-      <circle cx="${cx}" cy="${cy}" r="4" fill="${color}" opacity="0.9"/>
-      <text x="${cx}" y="${(py(r.avgHR) - 7).toFixed(1)}" text-anchor="middle" fill="${color}" font-size="9" font-weight="700" font-family="system-ui">${r.avgHR}</text>`;
+      <circle cx="${cx}" cy="${cy}" r="1.5" fill="${color}" opacity="0.9"/>
+      <text x="${cx}" y="${(parseFloat(cy) - 4).toFixed(1)}" text-anchor="middle" fill="${color}" font-size="5.5" font-weight="700" font-family="system-ui">${r.avgHR}</text>`;
   }).join('');
 
-  return `<svg width="100%" height="${H}" viewBox="0 0 ${LW} ${H}" preserveAspectRatio="none" style="display:block;overflow:visible">
+  return `<svg width="100%" viewBox="0 0 ${LW} ${H}" style="display:block;overflow:visible">
     ${ticks.join('')}
     <polyline points="${linePts}" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="2" stroke-linejoin="round"/>
     ${dots}

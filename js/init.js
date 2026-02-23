@@ -6,7 +6,7 @@ import { renderSetupWizard, handleSetup, cancelEdit, openEditProfile,
 import { openModal, closeModal, openNewRunModal, updateNewRunTempoBreakdown } from './render-modal.js';
 import { handleComplete, handleUncomplete, handleUpdateRun, handleSkip, handleUnskip,
          handleMove, handleSaveNotes, handleAddRun, handleDeleteRun, dayCellClick,
-         onDragStart, onDragOver, onDragLeave, onDrop } from './handlers.js';
+         onDragStart, onDragOver, onDragLeave, onDrop, stravaUnlink } from './handlers.js';
 import { stravaExchangeCode, saveStravaSettings, stravaDisconnect,
          linkStravaActivity, confirmStravaLink, declineStravaLink,
          stravaBulkSync, closeBulkSyncModal,
@@ -21,7 +21,7 @@ Object.assign(window, {
   openModal, closeModal, openNewRunModal, updateNewRunTempoBreakdown,
   handleComplete, handleUncomplete, handleUpdateRun, handleSkip, handleUnskip,
   handleMove, handleSaveNotes, handleAddRun, handleDeleteRun, dayCellClick,
-  onDragStart, onDragOver, onDragLeave, onDrop,
+  onDragStart, onDragOver, onDragLeave, onDrop, stravaUnlink,
   saveStravaSettings, stravaDisconnect, linkStravaActivity, confirmStravaLink, declineStravaLink,
   stravaBulkSync, closeBulkSyncModal,
   linkFromBulk, linkFromBulkSelect, rejectBulkActivity, restoreBulkActivity, addNewFromBulk,
@@ -47,5 +47,11 @@ loadState();
       if (state.profile && state.view === 'plan') renderMainContent();
     }, 180);
   });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      closeModal();
+      // Close settings overlay (edit mode only — don't close initial setup)
+      if (state.profile) document.getElementById('setup-overlay')?.remove();
+    }
+  });
 })();

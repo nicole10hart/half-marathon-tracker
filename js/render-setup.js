@@ -13,11 +13,27 @@ export function renderSetupWizard(prefill) {
   // Inline Strava connected check to avoid importing strava.js here
   const isStravaConnected = !!(state.strava?.accessToken);
 
-  document.getElementById('main-content').innerHTML = `
-    <div class="setup-overlay">
+  // Append to body so the overlay sits above the nav bar (escapes #main-content stacking context)
+  document.getElementById('setup-overlay')?.remove();
+  const _overlay = document.createElement('div');
+  _overlay.id = 'setup-overlay';
+  _overlay.className = 'setup-overlay';
+  if (prefill) _overlay.addEventListener('click', e => { if (e.target === _overlay) cancelEdit(); });
+  _overlay.innerHTML = `
       <div class="setup-card">
+        ${prefill ? `<button class="modal-close" onclick="cancelEdit()" style="position:absolute;top:18px;right:18px">✕</button>` : ''}
         <div class="setup-logo">
-          <div class="setup-logo-icon">🏃</div>
+          <div class="setup-logo-icon">
+            <svg viewBox="0 0 100 100" width="26" height="26" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="60" cy="17" r="7" fill="white"/>
+              <path d="M66 12 Q80 5 77 17" stroke="white" stroke-width="5" fill="none" stroke-linecap="round"/>
+              <line x1="60" y1="24" x2="54" y2="44" stroke="white" stroke-width="6" stroke-linecap="round"/>
+              <line x1="58" y1="32" x2="41" y2="26" stroke="white" stroke-width="5" stroke-linecap="round"/>
+              <line x1="58" y1="32" x2="67" y2="42" stroke="white" stroke-width="5" stroke-linecap="round"/>
+              <polyline points="54,44 42,62 36,77" stroke="white" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              <line x1="54" y1="44" x2="64" y2="66" stroke="white" stroke-width="6" stroke-linecap="round"/>
+            </svg>
+          </div>
           <div class="setup-logo-text">Half<em>Track</em></div>
         </div>
         <div class="setup-h">${prefill ? 'Edit your profile' : 'Build your training plan'}</div>
@@ -110,8 +126,8 @@ export function renderSetupWizard(prefill) {
           }
         </div>` : ''}
       </div>
-    </div>
   `;
+  document.body.appendChild(_overlay);
 }
 
 export function handleSetup(e) {
@@ -142,6 +158,7 @@ export function handleSetup(e) {
   state.plan = generatePlan(state.profile);
   state.view = 'plan';
   saveState();
+  document.getElementById('setup-overlay')?.remove();
   import('./render-app.js').then(m => m.renderApp());
 }
 
@@ -150,6 +167,7 @@ export function openEditProfile() {
 }
 
 export function cancelEdit() {
+  document.getElementById('setup-overlay')?.remove();
   import('./render-app.js').then(m => m.renderApp());
 }
 
@@ -157,6 +175,7 @@ export function resetConfirm() {
   if (confirm('Reset your entire plan and all data?')) {
     Object.assign(state, { profile: null, plan: [], view: 'plan', strava: null });
     saveState();
+    document.getElementById('setup-overlay')?.remove();
     import('./render-app.js').then(m => m.renderApp());
   }
 }

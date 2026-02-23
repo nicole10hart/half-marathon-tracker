@@ -125,6 +125,7 @@ export function openModal(runId) {
         ? `<div class="strava-verified-row">
              <span class="strava-verified-badge">✓ Verified</span>
              <a class="strava-view-link" href="https://www.strava.com/activities/${run.stravaActivityId}" target="_blank">View on Strava ↗</a>
+             <button class="btn btn-ghost btn-sm" style="margin-left:auto;font-size:0.68rem;color:var(--t3)" onclick="stravaUnlink('${run.id}')">Unlink</button>
            </div>`
         : `<button class="btn btn-ghost btn-sm strava-link-btn" onclick="linkStravaActivity('${run.id}')">
              <span style="color:#fc4c02;font-weight:900;margin-right:2px">S</span> Link Strava Activity

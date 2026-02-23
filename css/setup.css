@@ -8,7 +8,7 @@
   backdrop-filter: blur(12px);
   z-index: 200;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   padding: 20px;
   overflow-y: auto;
@@ -23,6 +23,8 @@
   width: 100%;
   box-shadow: var(--shadow), 0 0 80px rgba(59, 130, 246, 0.08);
   animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  margin: auto;
+  position: relative;
 }
 
 .setup-logo {

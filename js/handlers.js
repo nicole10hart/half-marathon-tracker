@@ -251,6 +251,20 @@ export function handleAddRun(dateStr) {
   showToast('Run added', 'ok');
 }
 
+export function stravaUnlink(id) {
+  const r = state.plan.find(x => x.id === id);
+  if (!r) return;
+  r.stravaActivityId = null;
+  r.stravaVerified   = false;
+  r.avgHR            = null;
+  r.maxHR            = null;
+  r.hrStream         = null;
+  saveState();
+  import('./render-modal.js').then(m => { m.closeModal(true); m.openModal(id); });
+  renderMainContent();
+  showToast('Strava activity unlinked', 'warn');
+}
+
 export function handleDeleteRun(id) {
   const r = state.plan.find(x => x.id === id);
   if (!r) return;
