@@ -1,0 +1,56 @@
+@media (max-width: 720px) {
+  .stats-pair    { grid-template-columns: 1fr; }
+  .stats-pair-13 { grid-template-columns: 1fr; }
+  .combo-inner   { grid-template-columns: 1fr; }
+  .setup-card { padding: 28px 24px; }
+  .form-grid { grid-template-columns: 1fr; }
+  .fg-full { grid-column: 1; }
+  nav { padding: 0 12px; gap: 10px; }
+  .cal-header,
+  .week-row { grid-template-columns: 56px repeat(7, 1fr); }
+  #main-content { padding: 12px 12px 48px; }
+  .progress-header { flex-direction: column; gap: 14px; align-items: stretch; }
+  .ph-kpis { justify-content: space-around; }
+  .rl-row { grid-template-columns: 110px 1fr 80px 50px; }
+  .rl-pace { display: none; }
+  .rl-hr   { display: none; }
+}
+@media (max-width: 540px) {
+  .nav-tab { padding: 4px 12px; font-size: 0.82rem; }
+  .btn-txt { display: none; }
+
+  /* Setup wizard: full-screen scrollable sheet */
+  .setup-overlay { align-items: flex-start; padding: 0; overflow-y: auto; }
+  .setup-card {
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    border-top: none;
+    box-shadow: none;
+    padding: 20px 16px 40px;
+    min-height: 100vh;
+  }
+  .setup-logo { margin-bottom: 10px; }
+  .setup-logo-icon { width: 30px; height: 30px; font-size: 14px; }
+  .setup-logo-text { font-size: 1.1rem; }
+  .setup-h { font-size: 1.2rem; margin-bottom: 4px; }
+  .setup-sub { font-size: 0.83rem; margin-bottom: 14px; }
+  .setup-actions { margin-top: 14px; flex-direction: column-reverse; }
+  .setup-actions .btn { width: 100%; justify-content: center; }
+
+  #toast-wrap { bottom: 80px; right: 12px; left: 12px; max-width: none; }
+  .modal-overlay { align-items: flex-end; padding: 0; }
+  .modal-card {
+    border-radius: 20px 20px 0 0;
+    max-height: 92vh;
+    width: 100%;
+    max-width: 100%;
+  }
+  .modal-stats { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .mstat-val { font-size: 1.1rem; }
+}
+@media (max-width: 380px) {
+  .nav-tab { padding: 4px 8px; font-size: 0.76rem; }
+  .nav-brand { font-size: 1rem; }
+  .mob-run-date { min-width: 58px; }
+}

@@ -1,0 +1,90 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 16px; scroll-behavior: smooth; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--t1);
+  min-height: 100vh;
+  overflow-x: hidden;
+  line-height: 1.5;
+}
+
+/* Ambient background */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60% 50% at 15% 15%, rgba(59,130,246,0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 85% 80%, rgba(249,115,22,0.05) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 60% at 60% 30%, rgba(167,139,250,0.04) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ============================================================
+   BUTTONS
+============================================================ */
+.btn {
+  padding: 7px 14px;
+  border-radius: var(--radius-s);
+  border: none;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  line-height: 1;
+  white-space: nowrap;
+}
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-ghost   { background: transparent; color: var(--t2); border: 1px solid var(--border2); }
+.btn-ghost:hover:not(:disabled) { background: var(--border); color: var(--t1); }
+.btn-primary { background: var(--orange); color: #fff; }
+.btn-primary:hover:not(:disabled) { background: var(--orange2); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(249,115,22,0.35); }
+.btn-success { background: var(--green); color: #fff; }
+.btn-success:hover:not(:disabled) { background: #16a34a; }
+.btn-danger  { background: var(--red); color: #fff; }
+.btn-danger:hover:not(:disabled) { background: #dc2626; }
+.btn-sm { padding: 4px 9px; font-size: 0.76rem; }
+.btn-lg { padding: 12px 28px; font-size: 0.95rem; }
+
+/* ============================================================
+   MAIN LAYOUT
+============================================================ */
+#main-content {
+  position: relative;
+  z-index: 1;
+  max-width: 1480px;
+  margin: 0 auto;
+  padding: 20px 20px 60px;
+}
+
+/* ============================================================
+   ANIMATIONS
+============================================================ */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(32px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes curPulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(249,115,22,0); }
+  50%      { box-shadow: 0 0 0 5px rgba(249,115,22,0.08); }
+}
+.fade-in { animation: fadeIn 0.35s ease forwards; }
+.week-row.cur-row .week-label { animation: curPulse 3s ease-in-out infinite; }
+
+/* ============================================================
+   SCROLLBAR
+============================================================ */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
