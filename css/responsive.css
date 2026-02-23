@@ -11,9 +11,11 @@
   #main-content { padding: 12px 12px 48px; }
   .progress-header { flex-direction: column; gap: 14px; align-items: stretch; }
   .ph-kpis { justify-content: space-around; }
-  .rl-row { grid-template-columns: 110px 1fr 80px 50px; }
-  .rl-pace { display: none; }
-  .rl-hr   { display: none; }
+  .rl-row    { grid-template-columns: 110px 1fr 60px 44px; }
+  .rl-pace   { display: none; }
+  .rl-hr     { display: none; }
+  .rl-spacer { display: none; }
+  .rl-planned { display: none; }
 }
 @media (max-width: 540px) {
   .nav-tab { padding: 4px 12px; font-size: 0.82rem; }

@@ -326,7 +326,7 @@ function buildRunLogRows(plan) {
       <div class="rl-row" data-type="${r.type}">
         <div class="rl-date">${dateStr}</div>
         <div class="rl-type ct-${r.type}">${r.label}</div>
-        <div></div>
+        <div class="rl-spacer"></div>
         <div class="rl-hr">${hrCell}</div>
         <div class="rl-actual"><span class="rl-dist-val">${actualMi} mi</span></div>
         <div class="rl-planned"><span class="rl-plan-val">${r.distance} mi</span></div>
