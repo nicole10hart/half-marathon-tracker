@@ -9,7 +9,13 @@ export const DAYS_FULL  = ['Sunday','Monday','Tuesday','Wednesday','Thursday','F
 
 export const STATE_KEY = 'halftrack_v2';
 
-export const CT_TYPES = ['swimming','biking','pilates','yoga','surfing','skateboarding','weightlifting'];
+export const CT_TYPES = [
+  'aqua jogging', 'barre', 'basketball', 'biking', 'climbing', 'crossfit',
+  'dance', 'elliptical', 'foam rolling', 'golf', 'hiking', 'hiit',
+  'kayaking', 'martial arts', 'pilates', 'rowing', 'skateboarding',
+  'skiing', 'soccer', 'spinning', 'stretching', 'surfing', 'swimming',
+  'tennis', 'volleyball', 'weightlifting', 'yoga',
+];
 
 // Long run miles indexed from the end of the plan.
 // Index 0  = taper week (1 week before race)

@@ -348,7 +348,14 @@ export function openCTModal(dateStr, ctId = null) {
   overlay.id = 'run-modal';
   overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
 
-  const typeOptions = CT_TYPES.map(t =>
+  // Sort by most frequently logged, then alphabetically
+  const counts = {};
+  (state.crossTraining || []).forEach(x => { counts[x.type] = (counts[x.type] || 0) + 1; });
+  const sortedTypes = [...CT_TYPES].sort((a, b) => {
+    const diff = (counts[b] || 0) - (counts[a] || 0);
+    return diff !== 0 ? diff : a.localeCompare(b);
+  });
+  const typeOptions = sortedTypes.map(t =>
     `<option value="${t}" ${ct?.type === t ? 'selected' : ''}>${t}</option>`
   ).join('');
 
