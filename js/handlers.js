@@ -4,7 +4,7 @@ import { TYPE_LABELS } from './constants.js';
 import { COMPLETE_MSGS, SKIP_MSGS, randMsg, showToast, daysSince, isFuture } from './feedback.js';
 import { calcPaces, getPlanTotalWeeks } from './plan-generator.js';
 import { renderMainContent } from './render-app.js';
-import { closeModal, openNewRunModal } from './render-modal.js';
+import { closeModal, openDayCellPicker } from './render-modal.js';
 
 // Read the type select in the open modal and apply changes to run r
 function applyTypeChange(r) {
@@ -189,7 +189,38 @@ export function onDragLeave(e) {
 
 export function dayCellClick(e, dateStr) {
   if (e.target.closest('.run-card')) return; // clicking a run card opens its modal
-  openNewRunModal(dateStr);
+  if (e.target.closest('.ct-item')) return;  // clicking a CT item opens CT modal
+  openDayCellPicker(dateStr);
+}
+
+export function handleAddCT(dateStr) {
+  const type     = document.getElementById('ct-type')?.value;
+  const duration = parseInt(document.getElementById('ct-duration')?.value, 10) || 0;
+  const notes    = document.getElementById('ct-notes')?.value.trim() || '';
+  if (!type) return;
+  if (!state.crossTraining) state.crossTraining = [];
+  state.crossTraining.push({ id: uid(), date: dateStr, type, duration, notes });
+  saveState(); closeModal(); renderMainContent();
+  showToast(`${type} logged`, 'ok');
+}
+
+export function handleUpdateCT(id) {
+  const ct = (state.crossTraining || []).find(x => x.id === id);
+  if (!ct) return;
+  ct.type     = document.getElementById('ct-type')?.value || ct.type;
+  ct.duration = parseInt(document.getElementById('ct-duration')?.value, 10) || 0;
+  ct.notes    = document.getElementById('ct-notes')?.value.trim() || '';
+  saveState(); closeModal(); renderMainContent();
+  showToast('Cross training updated', 'ok');
+}
+
+export function handleDeleteCT(id) {
+  if (!state.crossTraining) return;
+  const idx = state.crossTraining.findIndex(x => x.id === id);
+  if (idx === -1) return;
+  state.crossTraining.splice(idx, 1);
+  saveState(); closeModal(); renderMainContent();
+  showToast('Cross training deleted', 'skip');
 }
 
 export function handleAddRun(dateStr) {

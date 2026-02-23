@@ -2,6 +2,7 @@ import { state } from './state.js';
 import { fmtPace, fmtSecs, parseTimeSecs, friendlyDate, esc } from './utils.js';
 import { calcPaces } from './plan-generator.js';
 import { isFuture } from './feedback.js';
+import { CT_TYPES } from './constants.js';
 
 function tempoWorkoutHTML(run) {
   const paces = calcPaces(
@@ -312,6 +313,76 @@ export function updateNewRunTempoBreakdown() {
       <span class="tg-phase cd">Cool-Down</span>
       <span class="tg-dist">${cd} mi &nbsp;·&nbsp; ${fmtPace(paces.easy)}</span>
     </div>`;
+}
+
+export function openDayCellPicker(dateStr) {
+  closeModal(true);
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'run-modal';
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+  overlay.innerHTML = `
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title">Add Activity</div>
+          <div class="modal-meta">${friendlyDate(dateStr)}</div>
+        </div>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;padding:4px 0 8px">
+        <button class="picker-btn run" onclick="openNewRunModal('${dateStr}')">+ Add Run</button>
+        <button class="picker-btn ct"  onclick="openCTModal('${dateStr}')">+ Add Cross Training</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+export function openCTModal(dateStr, ctId = null) {
+  closeModal(true);
+  const ct = ctId ? (state.crossTraining || []).find(x => x.id === ctId) : null;
+  const isEdit = !!ct;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'run-modal';
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+
+  const typeOptions = CT_TYPES.map(t =>
+    `<option value="${t}" ${ct?.type === t ? 'selected' : ''}>${t}</option>`
+  ).join('');
+
+  overlay.innerHTML = `
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title">${isEdit ? 'Edit' : 'Log'} Cross Training</div>
+          ${dateStr ? `<div class="modal-meta">${friendlyDate(dateStr)}</div>` : ''}
+        </div>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-section">
+        <span class="modal-section-label">Activity Type</span>
+        <select id="ct-type" style="width:100%;text-transform:capitalize">${typeOptions}</select>
+      </div>
+      <div class="modal-section">
+        <span class="modal-section-label">Duration (minutes)</span>
+        <input type="number" id="ct-duration" min="1" max="600" placeholder="e.g. 45"
+          value="${ct?.duration || ''}" style="width:100%">
+      </div>
+      <div class="modal-section">
+        <span class="modal-section-label">Notes <span style="color:var(--t3);font-weight:400">(optional)</span></span>
+        <textarea id="ct-notes" placeholder="How'd it go?">${ct?.notes || ''}</textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-primary full" onclick="${isEdit ? `handleUpdateCT('${ctId}')` : `handleAddCT('${dateStr}')`}">
+          ${isEdit ? 'Update' : 'Save'}
+        </button>
+        ${isEdit ? `<button class="btn btn-danger full" onclick="handleDeleteCT('${ctId}')">Delete</button>` : ''}
+        <button class="btn btn-ghost full" onclick="closeModal()">Cancel</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
 }
 
 export function closeModal(suppressFlash = false) {

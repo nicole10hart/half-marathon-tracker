@@ -3,10 +3,12 @@ import { renderApp, renderMainContent, switchView } from './render-app.js';
 import { filterRunLog } from './render-stats.js';
 import { renderSetupWizard, handleSetup, cancelEdit, openEditProfile,
          resetConfirm, onRaceDateChange, onStartDateChange } from './render-setup.js';
-import { openModal, closeModal, openNewRunModal, updateNewRunTempoBreakdown } from './render-modal.js';
+import { openModal, closeModal, openNewRunModal, updateNewRunTempoBreakdown,
+         openDayCellPicker, openCTModal } from './render-modal.js';
 import { handleComplete, handleUncomplete, handleUpdateRun, handleSkip, handleUnskip,
          handleMove, handleSaveNotes, handleAddRun, handleDeleteRun, dayCellClick,
-         onDragStart, onDragOver, onDragLeave, onDrop, stravaUnlink } from './handlers.js';
+         onDragStart, onDragOver, onDragLeave, onDrop, stravaUnlink,
+         handleAddCT, handleUpdateCT, handleDeleteCT } from './handlers.js';
 import { stravaExchangeCode, saveStravaSettings, stravaDisconnect,
          linkStravaActivity, confirmStravaLink, declineStravaLink,
          stravaBulkSync, closeBulkSyncModal,
@@ -19,6 +21,7 @@ Object.assign(window, {
   openEditProfile, handleSetup, cancelEdit, resetConfirm,
   onRaceDateChange, onStartDateChange,
   openModal, closeModal, openNewRunModal, updateNewRunTempoBreakdown,
+  openDayCellPicker, openCTModal, handleAddCT, handleUpdateCT, handleDeleteCT,
   handleComplete, handleUncomplete, handleUpdateRun, handleSkip, handleUnskip,
   handleMove, handleSaveNotes, handleAddRun, handleDeleteRun, dayCellClick,
   onDragStart, onDragOver, onDragLeave, onDrop, stravaUnlink,

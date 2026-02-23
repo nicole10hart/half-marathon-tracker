@@ -9,6 +9,8 @@ export const DAYS_FULL  = ['Sunday','Monday','Tuesday','Wednesday','Thursday','F
 
 export const STATE_KEY = 'halftrack_v2';
 
+export const CT_TYPES = ['swimming','biking','pilates','yoga','surfing','skateboarding','weightlifting'];
+
 // Long run miles indexed from the end of the plan.
 // Index 0  = taper week (1 week before race)
 // Index 1  = 2 weeks before race, etc.

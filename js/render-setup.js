@@ -173,7 +173,7 @@ export function cancelEdit() {
 
 export function resetConfirm() {
   if (confirm('Reset your entire plan and all data?')) {
-    Object.assign(state, { profile: null, plan: [], view: 'plan', strava: null });
+    Object.assign(state, { profile: null, plan: [], view: 'today', strava: null, crossTraining: [] });
     saveState();
     document.getElementById('setup-overlay')?.remove();
     import('./render-app.js').then(m => m.renderApp());

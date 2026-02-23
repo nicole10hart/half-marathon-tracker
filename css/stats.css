@@ -258,3 +258,60 @@
 .tb-type { font-size: 0.66rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 5px; }
 .tb-count { font-size: 1.1rem; font-weight: 700; }
 .tb-mi    { font-size: 0.7rem; color: var(--t3); margin-top: 1px; }
+
+/* ============================================================
+   TODAY VIEW
+============================================================ */
+.today-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+  align-items: start;
+}
+.today-date-header {
+  padding: 4px 2px;
+}
+.today-weekday  { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.03em; }
+.today-dateline { font-size: 0.85rem; color: var(--t3); margin-top: 2px; }
+
+.today-run-card {
+  background: var(--card-b);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-s);
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+  margin-bottom: 4px;
+}
+.today-run-card:hover { background: rgba(255,255,255,0.04); }
+.today-run-type   { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+.today-run-meta   { font-size: 0.88rem; font-weight: 600; color: var(--t1); }
+.today-run-status { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 4px; }
+.today-rest       { font-size: 0.84rem; color: var(--t3); padding: 6px 0; }
+
+.today-ct-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius-s);
+  border: 1px solid rgba(56,189,248,0.2);
+  background: rgba(56,189,248,0.04);
+  margin-bottom: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.today-ct-item:hover { background: rgba(56,189,248,0.09); }
+.today-ct-type  { font-size: 0.8rem; font-weight: 700; color: #38bdf8; text-transform: capitalize; }
+.today-ct-dur   { font-size: 0.75rem; color: var(--t2); }
+.today-ct-notes { font-size: 0.73rem; color: var(--t3); margin-left: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 120px; }
+
+.today-week-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-top: 4px;
+}
+.today-week-stat { text-align: center; }
+.today-week-val  { font-size: 1.4rem; font-weight: 800; letter-spacing: -0.03em; }
+.today-week-lbl  { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--t3); margin-top: 2px; }

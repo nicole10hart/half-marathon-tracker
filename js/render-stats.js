@@ -1,6 +1,7 @@
 import { state } from './state.js';
 import { parseTimeSecs, dStr, fmtSecs, fmtPace, parseDate } from './utils.js';
 import { estimateHalf, getPlanTotalWeeks } from './plan-generator.js';
+import { CT_TYPES } from './constants.js';
 
 export function getStats() {
   const plan = state.plan;
@@ -212,6 +213,43 @@ export function renderStatsHTML() {
         <div class="sc-title" style="margin-bottom:8px">Avg Heart Rate Over Time</div>
         ${hrTimeSeriesSVG(hrSeries)}` : ''}
       </div>` : ''}
+
+      ${(state.crossTraining?.length) ? (() => {
+        const ct = state.crossTraining;
+        const totalSessions = ct.length;
+        const totalMins = ct.reduce((s,x) => s + (x.duration||0), 0);
+        const breakdown = CT_TYPES.map(t => {
+          const entries = ct.filter(x => x.type === t);
+          if (!entries.length) return '';
+          const mins = entries.reduce((s,x) => s + (x.duration||0), 0);
+          return `
+            <div class="tb-item">
+              <div class="tb-type" style="color:#38bdf8">${t}</div>
+              <div class="tb-count">${entries.length}</div>
+              <div class="tb-mi">${mins ? `${mins} min` : '—'}</div>
+            </div>`;
+        }).join('');
+        return `
+        <div class="stats-card" style="border-color:rgba(56,189,248,0.25)">
+          <div class="sc-title" style="color:#38bdf8">Cross Training</div>
+          <div class="stat-bubbles" style="margin-bottom:14px">
+            <div class="stat-bubble">
+              <div class="sb-val" style="color:#38bdf8">${totalSessions}</div>
+              <div class="sb-lbl">sessions</div>
+            </div>
+            <div class="stat-bubble">
+              <div class="sb-val" style="color:#38bdf8">${totalMins}</div>
+              <div class="sb-lbl">total min</div>
+            </div>
+            ${totalMins && totalSessions ? `
+            <div class="stat-bubble">
+              <div class="sb-val" style="color:#38bdf8">${Math.round(totalMins/totalSessions)}</div>
+              <div class="sb-lbl">avg min</div>
+            </div>` : ''}
+          </div>
+          <div class="type-breakdown">${breakdown}</div>
+        </div>`;
+      })() : ''}
 
       <div class="stats-card">
         <div class="run-log-header">

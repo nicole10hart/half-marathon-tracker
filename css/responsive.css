@@ -17,9 +17,20 @@
   .rl-spacer { display: none; }
   .rl-planned { display: none; }
 }
+/* Tab labels: hide abbreviated form by default, show full text */
+.tab-abbr { display: none; }
+.tab-full  { display: inline; }
+
 @media (max-width: 540px) {
   .nav-tab { padding: 4px 12px; font-size: 0.82rem; }
   .btn-txt { display: none; }
+  /* Switch to abbreviated tab labels so 3 tabs fit alongside brand + right buttons */
+  .tab-abbr { display: inline; }
+  .tab-full  { display: none; }
+  /* Today view: 4-col week stats → 2×2 on very narrow */
+  .today-week-row { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  /* CT item notes: remove max-width constraint on small screens */
+  .today-ct-notes { max-width: none; }
 
   /* Setup wizard: full-screen scrollable sheet */
   .setup-overlay { align-items: flex-start; padding: 0; overflow-y: auto; }
@@ -55,4 +66,6 @@
   .nav-tab { padding: 4px 8px; font-size: 0.76rem; }
   .nav-brand { font-size: 1rem; }
   .mob-run-date { min-width: 58px; }
+  .today-week-val { font-size: 1.15rem; }
+  .today-weekday  { font-size: 1.15rem; }
 }

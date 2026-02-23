@@ -64,6 +64,20 @@ export function renderPlanMobileHTML() {
     else if (isCut)   badge = `<span class="week-badge wb-cut">Cutback</span>`;
     else if (isTaper) badge = `<span class="week-badge wb-tap">Taper</span>`;
 
+    // Collect ALL CT entries for this week's date range (not just run days)
+    const runDatesSet = new Set(weekRuns.map(r => r.date));
+    const earliest = weekRuns.reduce((a,b) => a.date < b.date ? a : b).date;
+    const sun = new Date(parseDate(earliest));
+    sun.setDate(sun.getDate() - sun.getDay());
+    const weekDates = Array.from({length:7}, (_,i) => {
+      const d = new Date(sun); d.setDate(sun.getDate() + i); return dStr(d);
+    });
+    const ctByDate = {};
+    (state.crossTraining||[]).filter(ct => weekDates.includes(ct.date))
+      .forEach(ct => { (ctByDate[ct.date] = ctByDate[ct.date] || []).push(ct); });
+    // CT-only dates (rest days with cross training)
+    const ctOnlyDates = weekDates.filter(d => !runDatesSet.has(d) && ctByDate[d]?.length);
+
     const runRows = weekRuns.map(r => {
       const rd        = parseDate(r.date);
       const dateLabel = rd.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
@@ -87,7 +101,25 @@ export function renderPlanMobileHTML() {
             <div class="mob-run-dist">${distLine} &nbsp;·&nbsp; ${fmtPace(r.actualPace ?? r.estimatedPace)}</div>
           </div>
           <div class="mob-run-status ${stCls}">${stIcon}</div>
-        </div>`;
+        </div>
+        ${(ctByDate[r.date]||[]).map(ct =>
+          `<div class="ct-item mob-ct-item" onclick="openCTModal(null,'${ct.id}')">${ct.type}${ct.duration ? ` · ${ct.duration} min` : ''}</div>`
+        ).join('')}`;
+    }).join('');
+
+    const ctOnlyRows = ctOnlyDates.sort().map(d => {
+      const rd = parseDate(d);
+      const dateLabel = rd.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
+      return ctByDate[d].map(ct =>
+        `<div class="mob-run" onclick="openCTModal(null,'${ct.id}')">
+          <div class="mob-run-date">${dateLabel}</div>
+          <div class="mob-run-body">
+            <div class="mob-run-label" style="color:#38bdf8">${ct.type}</div>
+            ${ct.duration ? `<div class="mob-run-dist">${ct.duration} min</div>` : ''}
+          </div>
+          <div class="mob-run-status mob-st-todo" style="background:#38bdf8;color:#0f172a">+</div>
+        </div>`
+      ).join('');
     }).join('');
 
     weeksHtml += `
@@ -100,6 +132,7 @@ export function renderPlanMobileHTML() {
           <div class="mob-wk-mi">${miComp.toFixed(1)} / ${miAll.toFixed(1)} mi</div>
         </div>
         ${runRows}
+        ${ctOnlyRows}
       </div>`;
   }
 
@@ -178,6 +211,8 @@ export function renderPlanHTML() {
       const isToday  = ds === today;
       const cellRuns = (byDate[ds]||[]).filter(r => r.week === week);
       const cards    = cellRuns.map(r => runCardHTML(r)).join('');
+      const ctCards  = (state.crossTraining||[]).filter(ct => ct.date === ds)
+        .map(ct => `<div class="ct-item" onclick="openCTModal(null,'${ct.id}')">${ct.type}${ct.duration ? ` · ${ct.duration} min` : ''}</div>`).join('');
 
       const curMonth = cellDate.getMonth();
       const showMonth = curMonth !== lastSeenMonth;
@@ -195,6 +230,7 @@ export function renderPlanHTML() {
              ondrop="onDrop(event,'${ds}')">
           <span class="day-date${isToday?' today-label':''}">${dayLabel}</span>
           ${cards}
+          ${ctCards}
         </div>`;
     }
 

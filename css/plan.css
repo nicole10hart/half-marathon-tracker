@@ -249,3 +249,26 @@
   opacity: 0.4;
   filter: grayscale(0.5);
 }
+
+/* ============================================================
+   CROSS TRAINING ITEMS
+============================================================ */
+.ct-item {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #38bdf8;
+  padding: 2px 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+  text-transform: capitalize;
+}
+.ct-item:hover { background: rgba(56,189,248,0.1); }
+
+.mob-ct-item {
+  margin: 2px 8px 0;
+  display: block;
+}
