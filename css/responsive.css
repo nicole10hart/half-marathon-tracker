@@ -16,6 +16,11 @@
   .rl-hr     { display: none; }
   .rl-spacer { display: none; }
   .rl-planned { display: none; }
+  /* Totals card: stack running + CT vertically on mobile */
+  .summary-inner   { flex-direction: column; }
+  .summary-divider { width: auto; height: 1px; margin: 14px 0; align-self: auto; }
+  /* Pace trend: give chart a fixed height when stacked */
+  .pt-chart-fill   { min-height: 120px; }
 }
 
 @media (max-width: 540px) {

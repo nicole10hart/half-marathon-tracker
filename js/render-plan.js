@@ -1,5 +1,5 @@
 import { state } from './state.js';
-import { dStr, parseDate, fmtPace } from './utils.js';
+import { dStr, parseDate, fmtPace, esc } from './utils.js';
 import {
   isCutbackWFE, getPlanTotalWeeks, getCurrentWeek, raceCountdown,
 } from './plan-generator.js';
@@ -48,7 +48,7 @@ export function runCardHTML(run) {
          data-run-id="${run.id}"
          ondragstart="onDragStart(event,'${run.id}')"
          onclick="openModal('${run.id}')">
-      <div class="rc-type ct-${run.type}">${typeIcon}${run.label}${stravaTag}</div>
+      <div class="rc-type ct-${run.type}">${typeIcon}${esc(run.label)}${stravaTag}</div>
       ${distHTML}
       <div class="rc-pace">${fmtPace(run.actualPace ?? run.estimatedPace)}</div>
       ${injTag}
@@ -119,14 +119,14 @@ export function renderPlanMobileHTML() {
         <div class="mob-run ${rowCls}" onclick="openModal('${r.id}')" style="position:relative">
           <div class="mob-run-date">${dateLabel}</div>
           <div class="mob-run-body">
-            <div class="mob-run-label ct-${r.type}">${r.label}${stravaTag}</div>
+            <div class="mob-run-label ct-${r.type}">${esc(r.label)}${stravaTag}</div>
             <div class="mob-run-dist">${distLine} &nbsp;·&nbsp; ${fmtPace(r.actualPace ?? r.estimatedPace)}</div>
           </div>
           <div class="mob-run-status ${stCls}">${stIcon}</div>
           ${injTag}
         </div>
         ${(ctByDate[r.date]||[]).map(ct =>
-          `<div class="ct-item mob-ct-item" onclick="openCTModal(null,'${ct.id}')">${ct.type}${ct.duration ? ` · ${ct.duration} min` : ''}</div>`
+          `<div class="ct-item mob-ct-item" onclick="openCTModal(null,'${ct.id}')">${esc(ct.type)}${ct.duration ? ` · ${ct.duration} min` : ''}</div>`
         ).join('')}`;
     }).join('');
 
@@ -137,7 +137,7 @@ export function renderPlanMobileHTML() {
         `<div class="mob-run" onclick="openCTModal(null,'${ct.id}')">
           <div class="mob-run-date">${dateLabel}</div>
           <div class="mob-run-body">
-            <div class="mob-run-label" style="color:#38bdf8">${ct.type}</div>
+            <div class="mob-run-label" style="color:#38bdf8">${esc(ct.type)}</div>
             ${ct.duration ? `<div class="mob-run-dist">${ct.duration} min</div>` : ''}
           </div>
           <div class="mob-run-status mob-st-todo" style="background:#38bdf8;color:#0f172a">+</div>
@@ -162,7 +162,7 @@ export function renderPlanMobileHTML() {
   return `
     <div class="progress-header fade-in">
       <div class="ph-info">
-        <div class="ph-title">${state.profile.name}'s Plan</div>
+        <div class="ph-title">${esc(state.profile.name)}'s Plan</div>
         <div class="ph-sub">Week ${curWeek} of ${totalWeeks} &nbsp;·&nbsp; ${raceCountdown()}</div>
       </div>
       <div class="ph-bar-wrap">
@@ -235,7 +235,7 @@ export function renderPlanHTML() {
       const cellRuns = (byDate[ds]||[]).filter(r => r.week === week);
       const cards    = cellRuns.map(r => runCardHTML(r)).join('');
       const ctCards  = (state.crossTraining||[]).filter(ct => ct.date === ds)
-        .map(ct => `<div class="ct-item" onclick="openCTModal(null,'${ct.id}')">${ct.type}${ct.duration ? ` · ${ct.duration} min` : ''}</div>`).join('');
+        .map(ct => `<div class="ct-item" onclick="openCTModal(null,'${ct.id}')">${esc(ct.type)}${ct.duration ? ` · ${ct.duration} min` : ''}</div>`).join('');
 
       const curMonth = cellDate.getMonth();
       const showMonth = curMonth !== lastSeenMonth;
@@ -267,7 +267,7 @@ export function renderPlanHTML() {
   return `
     <div class="progress-header fade-in">
       <div class="ph-info">
-        <div class="ph-title">${state.profile.name}'s Half Marathon Plan</div>
+        <div class="ph-title">${esc(state.profile.name)}'s Half Marathon Plan</div>
         <div class="ph-sub">Week ${curWeek} of ${totalWeeks} &nbsp;·&nbsp; ${raceCountdown()}</div>
       </div>
       <div class="ph-bar-wrap">

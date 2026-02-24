@@ -43,6 +43,13 @@
   letter-spacing: 0.08em;
   margin-bottom: 14px;
 }
+.sc-sub-inline {
+  font-size: 0.72rem; font-weight: 500; color: var(--t3);
+  text-transform: none; letter-spacing: 0; margin-left: 6px;
+}
+.warmup-preview {
+  font-size: 0.82rem; color: var(--t3); line-height: 1.5; margin: 6px 0 4px;
+}
 
 /* Ring */
 .ring-wrap { display: flex; flex-direction: column; align-items: center; gap: 14px; }
@@ -209,7 +216,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
-  align-items: start;
+  align-items: stretch;
 }
 .stats-pair-13 {
   display: grid;
@@ -250,6 +257,41 @@
 .strava-hr-grid {
   display: grid; grid-template-columns: 1fr 1fr 1fr;
   gap: 8px; margin-top: 10px;
+}
+
+/* Summary card (Totals) */
+.summary-inner {
+  display: flex;
+  gap: 0;
+  align-items: flex-start;
+}
+.summary-col     { min-width: 0; }
+.summary-running { flex: 0 0 auto; }
+.summary-ct      { flex: 1; }
+.summary-divider {
+  width: 1px; background: var(--border);
+  align-self: stretch; margin: 0 18px; flex-shrink: 0;
+}
+.summary-section-lbl {
+  font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.07em; color: var(--t3); margin-bottom: 10px;
+}
+
+/* Pace trend card */
+.pace-trend-card { display: flex; flex-direction: column; }
+.pt-chart-fill   { flex: 1; min-height: 80px; }
+.pt-empty {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center; padding: 20px 10px; gap: 8px;
+  min-height: 80px;
+}
+.pt-empty-icon { font-size: 1.8rem; opacity: 0.18; line-height: 1; }
+.pt-empty-hint { font-size: 0.82rem; font-weight: 600; color: var(--t2); }
+.pt-empty-sub  { font-size: 0.72rem; color: var(--t3); max-width: 200px; line-height: 1.5; }
+.ct-empty {
+  font-size: 0.78rem; color: var(--t3); line-height: 1.55;
+  padding: 6px 0 2px;
 }
 
 /* Type breakdown */
@@ -486,3 +528,56 @@
 .modal-inj-since {
   font-size: 0.68rem; color: var(--t3);
 }
+
+/* ============================================================
+   RACE FORECAST CARD
+============================================================ */
+.forecast-card { border-color: rgba(249,115,22,0.3); }
+.fc-race-date  { font-size: 0.82rem; color: var(--t3); margin-bottom: 14px; }
+.fc-rows       { display: flex; flex-direction: column; gap: 10px; }
+.fc-row        { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.fc-label      { font-size: 0.8rem; color: var(--t3); }
+.fc-val        { font-size: 1.5rem; font-weight: 800; color: var(--t1); font-variant-numeric: tabular-nums; }
+.fc-proj       { color: var(--orange); }
+.fc-proj-empty { font-size: 0.78rem; font-weight: 400; color: var(--t3); font-style: italic; }
+.fc-delta      { font-size: 0.9rem; font-weight: 700; padding-top: 6px; border-top: 1px solid var(--border); }
+
+/* ============================================================
+   PACE TREND + ADHERENCE CARDS
+============================================================ */
+.adh-rows { display: flex; flex-direction: column; gap: 7px; margin-bottom: 16px; }
+.adh-row  { display: grid; grid-template-columns: 36px 1fr 64px 34px; align-items: center; gap: 8px; }
+.adh-row.adh-cur .adh-week { color: var(--orange); font-weight: 700; }
+.adh-week { font-size: 0.72rem; color: var(--t3); font-weight: 600; white-space: nowrap; }
+.adh-bar-wrap { height: 6px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; }
+.adh-bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
+.adh-mi   { font-size: 0.68rem; color: var(--t3); text-align: right; }
+.adh-pct  { font-size: 0.75rem; font-weight: 700; text-align: right; }
+.adh-kpis { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; padding-top: 12px; border-top: 1px solid var(--border); }
+.adh-kpi  { text-align: center; }
+.adh-kpi-val { font-size: 1.2rem; font-weight: 800; }
+.adh-kpi-lbl { font-size: 0.62rem; color: var(--t3); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }
+.adh-mi-row  { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; padding-top: 10px; border-top: 1px solid var(--border); margin-top: 8px; }
+.adh-mi-stat { text-align: center; }
+.adh-mi-val  { font-size: 1.05rem; font-weight: 800; }
+.adh-mi-lbl  { font-size: 0.6rem; color: var(--t3); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }
+
+/* ============================================================
+   WARM-UP CARD (Today page)
+============================================================ */
+.warmup-card {
+  background: linear-gradient(135deg, rgba(249,115,22,0.08) 0%, var(--card-b) 60%);
+  border-color: rgba(249,115,22,0.35);
+}
+.warmup-card.warmup-done {
+  background: linear-gradient(135deg, rgba(34,197,94,0.08) 0%, var(--card-b) 60%);
+  border-color: rgba(34,197,94,0.35);
+}
+.warmup-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.warmup-title  { font-size: 0.7rem; font-weight: 700; color: var(--t3); text-transform: uppercase; letter-spacing: 0.08em; }
+.warmup-time   { font-size: 0.72rem; font-weight: 700; color: var(--orange); background: rgba(249,115,22,0.12); padding: 2px 10px; border-radius: 10px; }
+.warmup-done-badge { font-size: 0.72rem; font-weight: 700; color: var(--green); background: rgba(34,197,94,0.12); padding: 2px 10px; border-radius: 10px; }
+.warmup-pills  { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 14px; }
+.warmup-pill   { font-size: 0.7rem; color: var(--t2); background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 8px; padding: 2px 8px; }
+.warmup-pill.wu-more { color: var(--orange); border-color: rgba(249,115,22,0.3); }
+.warmup-meta   { font-size: 0.76rem; color: var(--t3); margin-bottom: 10px; }

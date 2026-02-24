@@ -46,17 +46,17 @@ export function renderSetupWizard(prefill) {
           <div class="form-grid">
             <div class="form-group fg-full">
               <label for="s-name">Your Name</label>
-              <input id="s-name" type="text" placeholder="e.g. Alex" value="${p.name||''}" required autocomplete="given-name">
+              <input id="s-name" type="text" placeholder="e.g. Alex" value="${esc(p.name||'')}" required autocomplete="given-name">
             </div>
 
             <div class="form-group">
               <label for="s-5k">5K Personal Best <span style="color:var(--t3);font-weight:500;text-transform:none;letter-spacing:0">(optional)</span></label>
-              <input id="s-5k" type="text" placeholder="28:30" value="${p.fiveKTime||''}">
+              <input id="s-5k" type="text" placeholder="28:30" value="${esc(p.fiveKTime||'')}">
               <span class="form-hint">Format: MM:SS</span>
             </div>
             <div class="form-group">
               <label for="s-10k">10K Personal Best <span style="color:var(--t3);font-weight:500;text-transform:none;letter-spacing:0">(optional)</span></label>
-              <input id="s-10k" type="text" placeholder="58:45" value="${p.tenKTime||''}">
+              <input id="s-10k" type="text" placeholder="58:45" value="${esc(p.tenKTime||'')}">
               <span class="form-hint">Format: MM:SS or H:MM:SS</span>
             </div>
 

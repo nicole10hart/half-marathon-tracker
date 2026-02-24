@@ -1,5 +1,6 @@
 import { state, loadState } from './state.js';
-import { renderApp, renderMainContent, switchView } from './render-app.js';
+import { renderApp, renderMainContent, switchView,
+         openWarmupGuide, warmupStep, warmupJump, closeWarmupGuide, finishWarmupGuide } from './render-app.js';
 import { filterRunLog } from './render-stats.js';
 import { handleSetup, cancelEdit, openEditProfile,
          resetConfirm, onRaceDateChange, onStartDateChange } from './render-setup.js';
@@ -21,7 +22,7 @@ import { stravaExchangeCode, saveStravaSettings, stravaDisconnect,
 
 // Bridge all onclick-callable functions to window
 Object.assign(window, {
-  switchView,
+  switchView, openWarmupGuide, warmupStep, warmupJump, closeWarmupGuide, finishWarmupGuide,
   openEditProfile, handleSetup, cancelEdit, resetConfirm,
   onRaceDateChange, onStartDateChange,
   openModal, closeModal, openNewRunModal, updateNewRunTempoBreakdown,
@@ -59,6 +60,7 @@ loadState();
   });
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
+      closeWarmupGuide();
       closeModal();
       // Close settings overlay (edit mode only — don't close initial setup)
       if (state.profile) document.getElementById('setup-overlay')?.remove();

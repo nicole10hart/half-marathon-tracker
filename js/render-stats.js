@@ -1,6 +1,7 @@
 import { state } from './state.js';
-import { parseTimeSecs, dStr, fmtSecs, fmtPace, parseDate } from './utils.js';
-import { estimateHalf } from './plan-generator.js';
+import { parseTimeSecs, dStr, fmtSecs, fmtPace, parseDate, esc } from './utils.js';
+import { estimateHalf, getTrainingProjection, getPaceTrend,
+         getCurrentWeek, getPlanTotalWeeks } from './plan-generator.js';
 import { CT_TYPES } from './constants.js';
 
 export function getStats() {
@@ -57,137 +58,260 @@ export function getStats() {
   return { total, completed, skipped, upcoming, milesComp, milesAll, streak, weeks, halfSecs, stravaVerified, stravaStreak, avgHR, highHR, lowAvgHR };
 }
 
-function trainingHeatmapInnerHTML() {
-  if (!state.plan.length) return '';
 
-  const dates  = state.plan.map(r => r.date).sort();
-  const startD = parseDate(dates[0]);
-  const endD   = parseDate(dates[dates.length - 1]);
+function renderSummaryCard() {
+  const stats = getStats();
+  const ct    = state.crossTraining;
 
-  // Align to Sunday of first week / Saturday of last week
-  const sun = new Date(startD); sun.setDate(startD.getDate() - startD.getDay());
-  const sat = new Date(endD);   sat.setDate(endD.getDate() + (6 - endD.getDay()));
-
-  const runsByDate = {};
-  state.plan.forEach(r => { (runsByDate[r.date] = runsByDate[r.date] || []).push(r); });
-  const ctByDate = {};
-  (state.crossTraining || []).forEach(ct => { (ctByDate[ct.date] = ctByDate[ct.date] || []).push(ct); });
-
-  const today = dStr(new Date());
-  const TYPE_COLORS = { easy:'#22c55e', tempo:'#f97316', long:'#3b82f6', recovery:'#a78bfa', race:'#f59e0b' };
-  const TYPE_DIMS   = { easy:'rgba(34,197,94,0.22)', tempo:'rgba(249,115,22,0.22)', long:'rgba(59,130,246,0.22)',
-                        recovery:'rgba(167,139,250,0.22)', race:'rgba(245,158,11,0.28)' };
-
-  const cells = [];
-  const cur = new Date(sun);
-  while (cur <= sat) {
-    const ds   = dStr(cur);
-    const runs = runsByDate[ds] || [];
-    const cts  = ctByDate[ds]  || [];
-
-    let color, title;
-    if (runs.length) {
-      const done  = runs.find(r => r.completed);
-      const skip  = runs.find(r => r.skipped);
-      const sched = runs.find(r => !r.completed && !r.skipped);
-      const p = done || sched || skip;
-      if (p.completed) {
-        color = TYPE_COLORS[p.type] || '#94a3b8';
-        title = `${ds}: ${p.label} — done`;
-      } else if (p.skipped) {
-        color = 'rgba(239,68,68,0.4)';
-        title = `${ds}: ${p.label} — skipped`;
-      } else if (ds > today) {
-        color = TYPE_DIMS[p.type] || 'rgba(148,163,184,0.18)';
-        title = `${ds}: ${p.label} — scheduled`;
-      } else {
-        color = 'rgba(239,68,68,0.2)';
-        title = `${ds}: ${p.label} — missed`;
-      }
-    } else if (cts.length) {
-      color = 'rgba(56,189,248,0.65)';
-      title = `${ds}: ${cts.map(c => c.type).join(', ')}`;
-    } else {
-      color = 'rgba(255,255,255,0.04)';
-      title = ds;
-    }
-    cells.push(`<div class="hm-cell" style="background:${color}" title="${title}"></div>`);
-    cur.setDate(cur.getDate() + 1);
-  }
-
-  return `
-    <div class="heatmap-legend">
-      <span class="hm-leg"><span class="hm-leg-dot" style="background:#22c55e"></span>Easy</span>
-      <span class="hm-leg"><span class="hm-leg-dot" style="background:#f97316"></span>Tempo</span>
-      <span class="hm-leg"><span class="hm-leg-dot" style="background:#3b82f6"></span>Long</span>
-      <span class="hm-leg"><span class="hm-leg-dot" style="background:#a78bfa"></span>Recovery</span>
-      <span class="hm-leg"><span class="hm-leg-dot" style="background:#38bdf8"></span>Cross Train</span>
-      <span class="hm-leg"><span class="hm-leg-dot" style="background:rgba(239,68,68,0.5)"></span>Skipped</span>
-    </div>
-    <div class="heatmap-wrapper">
-      <div class="hm-day-labels">
-        ${['S','M','T','W','T','F','S'].map(d => `<div>${d}</div>`).join('')}
-      </div>
-      <div class="heatmap-grid">${cells.join('')}</div>
-    </div>`;
-}
-
-function ctStatsCardHTML() {
-  const ct = state.crossTraining;
-  if (!ct?.length) return '';
-  const totalSessions = ct.length;
-  const totalMins = ct.reduce((s, x) => s + (x.duration || 0), 0);
-  const breakdown = CT_TYPES.map(t => {
-    const entries = ct.filter(x => x.type === t);
-    if (!entries.length) return '';
-    const mins = entries.reduce((s, x) => s + (x.duration || 0), 0);
-    return `
-      <div class="tb-item">
-        <div class="tb-type" style="color:#38bdf8">${t}</div>
-        <div class="tb-count">${entries.length}</div>
-        <div class="tb-mi">${mins ? `${mins} min` : '—'}</div>
-      </div>`;
-  }).join('');
-  return `
-    <div class="stats-card" style="border-color:rgba(56,189,248,0.25)">
-      <div class="sc-title" style="color:#38bdf8">Cross Training</div>
-      <div class="stat-bubbles" style="margin-bottom:14px">
+  const runningCol = `
+    <div class="summary-col summary-running">
+      <div class="summary-section-lbl">Running</div>
+      <div class="stat-bubbles-2">
         <div class="stat-bubble">
+          <div class="sb-val" style="color:var(--green)">${stats.milesComp.toFixed(1)}</div>
+          <div class="sb-lbl">mi run</div>
+        </div>
+        <div class="stat-bubble">
+          <div class="sb-val" style="color:var(--orange)">${stats.milesAll.toFixed(1)}</div>
+          <div class="sb-lbl">mi planned</div>
+        </div>
+        <div class="stat-bubble">
+          <div class="sb-val" style="color:var(--blue)">${stats.total}</div>
+          <div class="sb-lbl">total runs</div>
+        </div>
+        <div class="stat-bubble">
+          <div class="sb-val" style="color:var(--red)">${stats.skipped}</div>
+          <div class="sb-lbl">skipped</div>
+        </div>
+      </div>
+    </div>`;
+
+  let ctInner;
+  if (ct?.length) {
+    const totalSessions = ct.length;
+    const totalMins = ct.reduce((s, x) => s + (x.duration || 0), 0);
+    const breakdown = CT_TYPES.map(t => {
+      const entries = ct.filter(x => x.type === t);
+      if (!entries.length) return '';
+      const mins = entries.reduce((s, x) => s + (x.duration || 0), 0);
+      return `
+        <div class="tb-item">
+          <div class="tb-type" style="color:#38bdf8">${t}</div>
+          <div class="tb-count">${entries.length}</div>
+          <div class="tb-mi">${mins ? `${mins} min` : '—'}</div>
+        </div>`;
+    }).join('');
+    ctInner = `
+      <div class="stat-bubbles" style="margin-bottom:12px">
+        <div class="stat-bubble" style="border-color:rgba(56,189,248,0.2)">
           <div class="sb-val" style="color:#38bdf8">${totalSessions}</div>
           <div class="sb-lbl">sessions</div>
         </div>
-        <div class="stat-bubble">
+        <div class="stat-bubble" style="border-color:rgba(56,189,248,0.2)">
           <div class="sb-val" style="color:#38bdf8">${totalMins}</div>
           <div class="sb-lbl">total min</div>
         </div>
         ${totalMins && totalSessions ? `
-        <div class="stat-bubble">
+        <div class="stat-bubble" style="border-color:rgba(56,189,248,0.2)">
           <div class="sb-val" style="color:#38bdf8">${Math.round(totalMins / totalSessions)}</div>
           <div class="sb-lbl">avg min</div>
         </div>` : ''}
       </div>
-      <div class="type-breakdown">${breakdown}</div>
+      <div class="type-breakdown">${breakdown}</div>`;
+  } else {
+    ctInner = `<div class="ct-empty">Log a cross training session on the Today page to see your totals here</div>`;
+  }
+
+  const ctCol = `
+    <div class="summary-divider"></div>
+    <div class="summary-col summary-ct">
+      <div class="summary-section-lbl" style="color:#38bdf8">Cross Training</div>
+      ${ctInner}
+    </div>`;
+
+  return `
+    <div class="stats-card">
+      <div class="sc-title">Totals</div>
+      <div class="summary-inner">
+        ${runningCol}
+        ${ctCol}
+      </div>
+    </div>`;
+}
+
+function renderRaceForecastCard() {
+  const p = state.profile;
+  if (!p) return '';
+
+  const fiveKSecs = parseTimeSecs(p.fiveKTime);
+  const tenKSecs  = parseTimeSecs(p.tenKTime);
+  const goalSecs  = estimateHalf(fiveKSecs, tenKSecs);
+  const projSecs  = getTrainingProjection();
+
+  if (!goalSecs && !projSecs) return '';
+
+  let raceDateLine = '';
+  if (p.raceDate) {
+    const race     = parseDate(p.raceDate);
+    const today    = new Date(); today.setHours(0,0,0,0);
+    const diffDays = Math.round((race - today) / 86400000);
+    const label    = race.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    const cdStr    = diffDays < 0  ? 'Race complete'
+      : diffDays === 0 ? 'Today!'
+      : diffDays < 7   ? `${diffDays} day${diffDays===1?'':'s'} away`
+      : `${Math.ceil(diffDays / 7)} weeks away`;
+    raceDateLine = `<div class="fc-race-date">${label} &nbsp;·&nbsp; <span style="color:var(--orange)">${cdStr}</span></div>`;
+  }
+
+  const goalRow = goalSecs
+    ? `<div class="fc-row"><div class="fc-label">Goal (from race times)</div><div class="fc-val">${fmtSecs(Math.round(goalSecs))}</div></div>`
+    : '';
+
+  const projRow = projSecs
+    ? `<div class="fc-row"><div class="fc-label">Training projection</div><div class="fc-val fc-proj">${fmtSecs(projSecs)}</div></div>`
+    : goalSecs
+    ? `<div class="fc-row"><div class="fc-label">Training projection</div><div class="fc-val fc-proj-empty">Available after 5 completed runs with logged pace</div></div>`
+    : '';
+
+  let deltaHTML = '';
+  if (goalSecs && projSecs) {
+    const deltaSecs = Math.round(projSecs - goalSecs);
+    const abs   = Math.abs(deltaSecs);
+    const mins  = Math.floor(abs / 60), secs = abs % 60;
+    const fmt   = `${mins}:${String(secs).padStart(2,'0')}`;
+    const color = deltaSecs <= 0 ? 'var(--green)' : 'var(--red)';
+    const label = deltaSecs <= 0 ? `↑ ${fmt} ahead of goal` : `↓ ${fmt} behind goal`;
+    deltaHTML = `<div class="fc-delta" style="color:${color}">${label}</div>`;
+  }
+
+  return `
+    <div class="stats-card forecast-card">
+      <div class="sc-title">Race Forecast</div>
+      ${raceDateLine}
+      <div class="fc-rows">${goalRow}${projRow}${deltaHTML}</div>
+    </div>`;
+}
+
+function renderPaceTrendCard() {
+  const trend          = getPaceTrend();
+  const completedAny   = state.plan.filter(r => r.completed);
+  const withActualPace = completedAny.filter(r => r.actualPace);
+
+  // Empty states — always render the card, show unlock hint
+  if (trend.length < 3) {
+    let hint, sub;
+    if (!completedAny.length) {
+      hint = 'Complete your first run to start tracking pace';
+      sub  = 'Log actual pace when marking a run complete';
+    } else if (!withActualPace.length) {
+      hint = 'Log your actual pace to unlock this chart';
+      sub  = 'Open any completed run and enter your actual pace';
+    } else {
+      const needed = 3 - trend.length;
+      hint = `${needed} more week${needed > 1 ? 's' : ''} of pace data needed`;
+      sub  = 'Keep logging actual paces — your trend will appear here';
+    }
+    return `
+      <div class="stats-card pace-trend-card">
+        <div class="sc-title">Pace Trend</div>
+        <div class="pt-empty">
+          <div class="pt-empty-icon">↗</div>
+          <div class="pt-empty-hint">${hint}</div>
+          <div class="pt-empty-sub">${sub}</div>
+        </div>
+      </div>`;
+  }
+
+  const paces = trend.map(t => t.refPace);
+  const minP  = Math.min(...paces);
+  const maxP  = Math.max(...paces);
+  const rng   = maxP - minP || 10;
+
+  const W = 300, H = 80, LPAD = 42, PT = 8, PB = 18;
+  const plotW = W - LPAD - 8;
+  const plotH = H - PT - PB;
+
+  const xi = i => LPAD + (trend.length < 2 ? plotW / 2 : (i / (trend.length - 1)) * plotW);
+  // lower refPace = faster = higher on chart (invert Y)
+  const yi = p => PT + ((p - minP) / rng) * plotH;
+
+  const pts  = trend.map((t, i) => `${xi(i).toFixed(1)},${yi(t.refPace).toFixed(1)}`).join(' ');
+
+  const first = paces[0], last = paces[paces.length - 1];
+  const diff  = Math.round(last - first);
+  const absDiff = Math.abs(diff);
+  const lineColor = diff < -3 ? 'var(--green)' : diff > 3 ? 'var(--red)' : 'var(--orange)';
+  const trendBadge = diff < -3
+    ? `<span style="color:var(--green)">↑ ${absDiff}s/mi faster</span>`
+    : diff > 3
+    ? `<span style="color:var(--red)">↓ ${absDiff}s/mi slower</span>`
+    : `<span style="color:var(--t3)">→ Steady</span>`;
+
+  const dots = trend.map((t, i) =>
+    `<circle cx="${xi(i).toFixed(1)}" cy="${yi(t.refPace).toFixed(1)}" r="3" fill="${lineColor}"/>`
+  ).join('');
+  const labels = trend.map((t, i) =>
+    `<text x="${xi(i).toFixed(1)}" y="${H}" text-anchor="middle" fill="#475569" font-size="7" font-family="system-ui">W${t.week}</text>`
+  ).join('');
+
+  return `
+    <div class="stats-card pace-trend-card">
+      <div class="sc-title">Pace Trend <span class="sc-sub-inline">${trendBadge}</span></div>
+      <div class="pt-chart-fill">
+        <svg width="100%" height="100%" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="display:block;overflow:visible">
+          <text x="${LPAD - 4}" y="${(PT + 5).toFixed(1)}" text-anchor="end" fill="#475569" font-size="7.5" font-family="system-ui">${fmtPace(minP)} ↑</text>
+          <text x="${LPAD - 4}" y="${(PT + plotH).toFixed(1)}" text-anchor="end" fill="#475569" font-size="7.5" font-family="system-ui">${fmtPace(maxP)} ↓</text>
+          <polyline points="${pts}" fill="none" stroke="${lineColor}" stroke-width="2.5" stroke-linejoin="round" opacity="0.85"/>
+          ${dots}
+          ${labels}
+        </svg>
+      </div>
+    </div>`;
+}
+
+function renderAdherenceCard() {
+  if (!state.plan.length) return '';
+  const curWeek = getCurrentWeek();
+  const stats   = getStats();
+
+  const weekNums = [...new Set(state.plan.map(r => r.week))]
+    .filter(w => w <= curWeek)
+    .sort((a, b) => a - b);
+  if (!weekNums.length) return '';
+
+  const rows = weekNums.map(week => {
+    const weekRuns = state.plan.filter(r => r.week === week);
+    const planned  = weekRuns.reduce((s, r) => s + r.distance, 0);
+    const done     = weekRuns.filter(r => r.completed).reduce((s, r) => s + (r.actualDistance ?? r.distance), 0);
+    const pct      = planned ? Math.min(100, Math.round((done / planned) * 100)) : 0;
+    const barColor = pct >= 80 ? 'var(--green)' : pct >= 50 ? '#f59e0b' : 'var(--red)';
+    const isCur    = week === curWeek;
+    return `
+      <div class="adh-row${isCur ? ' adh-cur' : ''}">
+        <div class="adh-week">W${week}${isCur ? '◀' : ''}</div>
+        <div class="adh-bar-wrap"><div class="adh-bar-fill" style="width:${pct}%;background:${barColor}"></div></div>
+        <div class="adh-mi">${done.toFixed(1)}/${planned.toFixed(1)}</div>
+        <div class="adh-pct" style="color:${barColor}">${pct}%</div>
+      </div>`;
+  }).join('');
+
+  const overallPct = stats.total ? Math.round((stats.completed / stats.total) * 100) : 0;
+
+  return `
+    <div class="stats-card">
+      <div class="sc-title">Training Adherence</div>
+      <div class="adh-rows">${rows}</div>
+      <div class="adh-kpis">
+        <div class="adh-kpi"><div class="adh-kpi-val" style="color:var(--orange)">${overallPct}%</div><div class="adh-kpi-lbl">adherence</div></div>
+        <div class="adh-kpi"><div class="adh-kpi-val" style="color:var(--green)">${stats.completed}</div><div class="adh-kpi-lbl">done</div></div>
+        <div class="adh-kpi"><div class="adh-kpi-val" style="color:var(--red)">${stats.skipped}</div><div class="adh-kpi-lbl">skipped</div></div>
+        <div class="adh-kpi"><div class="adh-kpi-val" style="color:var(--t2)">${stats.upcoming}</div><div class="adh-kpi-lbl">remaining</div></div>
+      </div>
     </div>`;
 }
 
 export function renderStatsHTML() {
   const stats = getStats();
-  const pct = stats.total ? Math.round((stats.completed / stats.total) * 100) : 0;
-
-  const types = ['easy','tempo','long','recovery','race'];
-  const typeColors = { easy:'var(--green)', tempo:'var(--orange)', long:'var(--blue)', recovery:'var(--purple)', race:'var(--gold)' };
-  const typeBreakdown = types.map(t => {
-    const tr = state.plan.filter(r => r.type === t);
-    if (!tr.length) return '';
-    const done = tr.filter(r=>r.completed).length;
-    const mi   = tr.filter(r=>r.completed).reduce((s,r)=>s+r.distance,0);
-    return `
-      <div class="tb-item">
-        <div class="tb-type" style="color:${typeColors[t]}">${t}</div>
-        <div class="tb-count">${done}/${tr.length}</div>
-        <div class="tb-mi">${mi.toFixed(1)} mi done</div>
-      </div>`;
-  }).join('');
 
   const hrSeries = state.plan
     .filter(r => r.stravaVerified && r.avgHR > 0)
@@ -196,70 +320,11 @@ export function renderStatsHTML() {
   return `
     <div class="stats-layout fade-in">
 
-      <div class="stats-card combo-card">
-        <div class="combo-inner">
-          <div class="combo-left">
-            ${stats.halfSecs ? `
-            <div class="est-card">
-              <div class="sc-title" style="margin-bottom:6px">Estimated Finish</div>
-              <div class="est-val">${fmtSecs(Math.round(stats.halfSecs))}</div>
-              <div class="est-lbl">Half Marathon · 13.1 miles</div>
-            </div>` : ''}
-          </div>
-          <div style="min-width:0;display:flex;flex-direction:column">
-            <div class="sc-title">Training Calendar</div>
-            ${trainingHeatmapInnerHTML()}
-          </div>
-          <div style="display:flex;flex-direction:column">
-            <div class="sc-title">Completion</div>
-            <div class="stat-bubbles-2" style="flex:1;align-content:stretch;grid-auto-rows:1fr">
-              <div class="stat-bubble">
-                <div class="sb-val" style="color:var(--orange)">${pct}%</div>
-                <div class="sb-lbl">complete</div>
-              </div>
-              <div class="stat-bubble">
-                <div class="sb-val" style="color:var(--green)">${stats.completed}</div>
-                <div class="sb-lbl">done</div>
-              </div>
-              <div class="stat-bubble">
-                <div class="sb-val" style="color:var(--red)">${stats.skipped}</div>
-                <div class="sb-lbl">skipped</div>
-              </div>
-              <div class="stat-bubble">
-                <div class="sb-val" style="color:var(--t2)">${stats.upcoming}</div>
-                <div class="sb-lbl">remaining</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      ${renderRaceForecastCard()}
 
-      <div class="stats-pair-13">
-        <div class="stats-card" style="display:flex;flex-direction:column">
-          <div class="sc-title">Total Mileage</div>
-          <div class="stat-bubbles" style="flex:1;align-content:stretch;flex-wrap:wrap;align-items:stretch">
-            <div class="stat-bubble">
-              <div class="sb-val" style="color:var(--green)">${stats.milesComp.toFixed(1)}</div>
-              <div class="sb-lbl">mi run</div>
-            </div>
-            <div class="stat-bubble">
-              <div class="sb-val" style="color:var(--orange)">${stats.milesAll.toFixed(1)}</div>
-              <div class="sb-lbl">mi planned</div>
-            </div>
-            <div class="stat-bubble">
-              <div class="sb-val" style="color:var(--blue)">${stats.total}</div>
-              <div class="sb-lbl">total runs</div>
-            </div>
-            <div class="stat-bubble">
-              <div class="sb-val" style="color:var(--t2)">${stats.upcoming}</div>
-              <div class="sb-lbl">remaining</div>
-            </div>
-          </div>
-        </div>
-        <div class="stats-card">
-          <div class="sc-title">Run Type Breakdown</div>
-          <div class="type-breakdown">${typeBreakdown}</div>
-        </div>
+      <div class="stats-pair">
+        ${renderPaceTrendCard()}
+        ${renderAdherenceCard()}
       </div>
 
       ${stats.stravaVerified > 0 ? `
@@ -298,7 +363,7 @@ export function renderStatsHTML() {
         ${hrTimeSeriesSVG(hrSeries)}` : ''}
       </div>` : ''}
 
-      ${ctStatsCardHTML()}
+      ${renderSummaryCard()}
 
       <div class="stats-card">
         <div class="run-log-header">
@@ -427,13 +492,13 @@ function buildRunLogRows(plan) {
         (SEV_ORDER[b.severity] || 0) > (SEV_ORDER[a.severity] || 0) ? b : a
       );
       const injColor = SEV_COLOR[worst.severity] || '#f59e0b';
-      injBadge = `<span class="rl-inj" style="color:${injColor}" title="Active injur${activeInjuries.length > 1 ? 'ies' : 'y'}: ${activeInjuries.map(i => i.bodyPart).join(', ')}">!</span>`;
+      injBadge = `<span class="rl-inj" style="color:${injColor}" title="Active injur${activeInjuries.length > 1 ? 'ies' : 'y'}: ${activeInjuries.map(i => esc(i.bodyPart)).join(', ')}">!</span>`;
     }
 
     return `
       <div class="rl-row" data-type="${r.type}">
         <div class="rl-date">${dateStr}</div>
-        <div class="rl-type ct-${r.type}">${r.label}</div>
+        <div class="rl-type ct-${r.type}">${esc(r.label)}</div>
         <div class="rl-spacer"></div>
         <div class="rl-hr">${hrCell}</div>
         <div class="rl-actual"><span class="rl-dist-val">${actualMi} mi</span></div>

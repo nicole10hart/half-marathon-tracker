@@ -236,6 +236,55 @@ export function generatePlan(profile) {
   return runs.sort((a, b) => a.date.localeCompare(b.date));
 }
 
+// Project race finish time from actual training paces.
+// Requires ≥5 completed runs with actualPace. Returns projected finish seconds, or null.
+export function getTrainingProjection() {
+  const withActual = state.plan
+    .filter(r => r.completed && r.actualPace && PACE_OFFSETS[r.type] != null)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  if (withActual.length < 5) return null;
+
+  const recent = withActual.slice(-10);
+  let weightSum = 0, refSum = 0;
+  recent.forEach((r, i) => {
+    const w = i + 1;
+    refSum    += (r.actualPace - PACE_OFFSETS[r.type]) * w;
+    weightSum += w;
+  });
+  const refPace  = refSum / weightSum;
+  const racePace = refPace * 1.08;
+  return Math.round(racePace * 13.1);
+}
+
+// Returns [{week, refPace}] for each week that has completed runs with actualPace.
+// refPace is the mean inferred reference pace (actualPace - type offset) for that week.
+export function getPaceTrend() {
+  const byWeek = {};
+  state.plan
+    .filter(r => r.completed && r.actualPace && PACE_OFFSETS[r.type] != null)
+    .forEach(r => {
+      const ref = r.actualPace - PACE_OFFSETS[r.type];
+      if (!byWeek[r.week]) byWeek[r.week] = { week: r.week, refs: [] };
+      byWeek[r.week].refs.push(ref);
+    });
+  return Object.values(byWeek)
+    .sort((a, b) => a.week - b.week)
+    .map(w => ({ week: w.week, refPace: Math.round(w.refs.reduce((s, v) => s + v, 0) / w.refs.length) }));
+}
+
+// Returns upcoming hard runs (tempo/long/race) when there are active injuries.
+// Used to surface warnings on Today and Stats pages.
+export function getInjuryWarnings() {
+  const activeInjuries = (state.injuries || []).filter(i => !i.resolved);
+  if (!activeInjuries.length) return [];
+  const today     = dStr(new Date());
+  const hardTypes = new Set(['tempo', 'long', 'race']);
+  return state.plan
+    .filter(r => !r.completed && !r.skipped && r.date >= today && hardTypes.has(r.type))
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(0, 3);
+}
+
 export function getCurrentWeek() {
   if (!state.plan.length) return 1;
   const today = dStr(new Date());

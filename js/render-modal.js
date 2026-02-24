@@ -148,8 +148,8 @@ export function openModal(runId) {
       ${runInjuries.length ? runInjuries.map(inj => `
         <div class="modal-inj-row">
           <span class="modal-inj-dot" style="background:${sevColor[inj.severity] || '#94a3b8'}"></span>
-          <span class="modal-inj-part">${inj.bodyPart}</span>
-          <span class="modal-inj-sev">${inj.severity}</span>
+          <span class="modal-inj-part">${esc(inj.bodyPart)}</span>
+          <span class="modal-inj-sev">${esc(inj.severity)}</span>
           <span class="modal-inj-since">since ${inj.startDate}</span>
           <span style="flex:1"></span>
           ${!inj.resolved ? `<button class="btn btn-ghost btn-sm" style="font-size:0.68rem;padding:2px 8px" onclick="handleResolveInjury('${inj.id}')">Resolve</button>` : ''}
@@ -412,7 +412,7 @@ export function openCTModal(dateStr, ctId = null) {
       </div>
       <div class="modal-section">
         <span class="modal-section-label">Notes <span style="color:var(--t3);font-weight:400">(optional)</span></span>
-        <textarea id="ct-notes" placeholder="How'd it go?">${ct?.notes || ''}</textarea>
+        <textarea id="ct-notes" placeholder="How'd it go?">${esc(ct?.notes || '')}</textarea>
       </div>
       <div class="modal-actions">
         <button class="btn btn-primary full" onclick="${isEdit ? `handleUpdateCT('${ctId}')` : `handleAddCT('${dateStr}')`}">
@@ -466,7 +466,7 @@ export function openInjuryModal(injuryId = null, prefillDate = null) {
       </div>
       <div class="modal-section">
         <span class="modal-section-label">Notes <span style="color:var(--t3);font-weight:400">(optional)</span></span>
-        <textarea id="inj-notes" placeholder="Describe the pain, when it occurs...">${inj?.notes || ''}</textarea>
+        <textarea id="inj-notes" placeholder="Describe the pain, when it occurs...">${esc(inj?.notes || '')}</textarea>
       </div>
       <div class="modal-actions">
         <button class="btn btn-primary full" onclick="${isEdit ? `handleUpdateInjury('${injuryId}')` : `handleAddInjury()`}">
