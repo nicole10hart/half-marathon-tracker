@@ -236,53 +236,52 @@ export function generatePlan(profile) {
   return runs.sort((a, b) => a.date.localeCompare(b.date));
 }
 
-// Shared helper: compute refPace from profile race times
-function _punishmentRefPace(profile) {
+// Derive raw 5K and 10K pace (sec/mi) from profile times.
+function _punishmentBasePaces(profile) {
   const fiveKSecs = parseTimeSecs(profile.fiveKTime);
   const tenKSecs  = parseTimeSecs(profile.tenKTime);
-  if (fiveKSecs && tenKSecs) {
-    const p5  = fiveKSecs / 3.1;
-    const p5e = (tenKSecs * Math.pow(3.1/6.2, 1.06)) / 3.1;
-    return p5 * 0.45 + p5e * 0.55;
-  } else if (fiveKSecs) {
-    return fiveKSecs / 3.1;
-  } else if (tenKSecs) {
-    return (tenKSecs * Math.pow(3.1/6.2, 1.06)) / 3.1;
+  const fiveKPace = fiveKSecs ? fiveKSecs / 3.1 : 9 * 60;
+  // Use actual 10K pace; fall back to ~6% slower than 5K pace
+  const tenKPace  = tenKSecs  ? tenKSecs  / 6.2 : fiveKPace * 1.06;
+  return { fiveKPace, tenKPace };
+}
+
+// Per-type punishment paces. t=0 at week 1, t=1 at race week.
+// easy:     slightly slower than 5K → ramps to exactly 5K pace (very gradual)
+// recovery: a little slower than easy → ramps to ~easy pace
+// tempo:    faster than 5K pace → gets progressively harder
+// long:     at 10K pace → ramps slightly faster over the plan
+// race:     fixed at an aggressive goal pace
+function _punishmentPaceForType(type, wFE, fiveKPace, tenKPace, maxWFE) {
+  const t = maxWFE > 0 ? (maxWFE - wFE) / maxWFE : 1;
+  switch (type) {
+    case 'easy':     return Math.round(fiveKPace * (1.06 - t * 0.06)); // 1.06 → 1.00
+    case 'recovery': return Math.round(fiveKPace * (1.10 - t * 0.05)); // 1.10 → 1.05
+    case 'tempo':    return Math.round(fiveKPace * (0.95 - t * 0.05)); // 0.95 → 0.90
+    case 'long':     return Math.round(tenKPace  * (1.00 - t * 0.03)); // 1.00 → 0.97
+    case 'race':     return Math.round(fiveKPace * 0.90);              // fixed goal pace
+    default:         return Math.round(fiveKPace * (1.06 - t * 0.06));
   }
-  return 9 * 60;
 }
 
-const PUNISHMENT_TYPE_MULT = { tempo: 0.93, race: 0.90 };
-
-// Compute a single punishment pace for a given run type and wFE value.
-// Used when adding new runs manually in punishment mode.
+// Compute a single punishment pace — used for new runs and tempo breakdown display.
 export function calcPunishmentPace(type, wFE) {
-  const profile  = state.profile;
-  const refPace  = _punishmentRefPace(profile);
+  const profile = state.profile;
+  const { fiveKPace, tenKPace } = _punishmentBasePaces(profile);
   const totalWeeks = profile.totalWeeks || calcTotalWeeks(profile.startDate, profile.raceDate);
-  const maxWFE   = totalWeeks - 1;
-  const t        = maxWFE > 0 ? (maxWFE - wFE) / maxWFE : 1;
-  const base     = refPace * (1.0 - t * 0.18);
-  const mult     = PUNISHMENT_TYPE_MULT[type] ?? 1.0;
-  return Math.round(base * mult);
+  const maxWFE = totalWeeks - 1;
+  return _punishmentPaceForType(type, wFE, fiveKPace, tenKPace, maxWFE);
 }
 
-// Punishment plan: same schedule as generatePlan but all paces start at refPace
-// (no recovery offsets) and ramp up 18% faster by race day.
-// Week 1 = refPace (brutal — 5K pace for every run, no easy days)
-// Race day = refPace * 0.82 (genuinely insane)
+// Generate punishment plan: same run schedule as normal but with brutal per-type paces.
 export function generatePunishmentPlan(profile) {
-  const plan    = generatePlan(profile);
-  const refPace = _punishmentRefPace(profile);
+  const plan = generatePlan(profile);
+  const { fiveKPace, tenKPace } = _punishmentBasePaces(profile);
   const totalWeeks = profile.totalWeeks || calcTotalWeeks(profile.startDate, profile.raceDate);
-  const maxWFE  = totalWeeks - 1;
+  const maxWFE = totalWeeks - 1;
 
   plan.forEach(r => {
-    // t = 0 at week 1, t = 1 at race week — pace drops from 100% to 82% of refPace
-    const t    = maxWFE > 0 ? (maxWFE - r.wFE) / maxWFE : 1;
-    const base = refPace * (1.0 - t * 0.18);
-    const mult = PUNISHMENT_TYPE_MULT[r.type] ?? 1.0;
-    r.estimatedPace = Math.round(base * mult);
+    r.estimatedPace = _punishmentPaceForType(r.type, r.wFE, fiveKPace, tenKPace, maxWFE);
   });
 
   return plan;

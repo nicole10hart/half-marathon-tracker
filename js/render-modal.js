@@ -1,15 +1,24 @@
 import { state } from './state.js';
 import { fmtPace, fmtSecs, parseTimeSecs, friendlyDate, esc } from './utils.js';
-import { calcPaces } from './plan-generator.js';
+import { calcPaces, calcPunishmentPace } from './plan-generator.js';
 import { isFuture } from './feedback.js';
 import { CT_TYPES, INJURY_PARTS, INJURY_SEVERITY } from './constants.js';
 
 
 function tempoWorkoutHTML(run) {
-  const paces = calcPaces(
-    parseTimeSecs(state.profile.fiveKTime),
-    parseTimeSecs(state.profile.tenKTime)
-  );
+  let tempoPace, easyPace;
+  if (state.profile?.planType === 'punishment') {
+    // Calculate dynamically so stale localStorage plans still show correct paces
+    tempoPace = calcPunishmentPace('tempo', run.wFE);
+    easyPace  = calcPunishmentPace('easy',  run.wFE);
+  } else {
+    const paces = calcPaces(
+      parseTimeSecs(state.profile.fiveKTime),
+      parseTimeSecs(state.profile.tenKTime)
+    );
+    tempoPace = paces.tempo;
+    easyPace  = paces.easy;
+  }
   const total = run.distance;
   const wu  = Math.max(1,   Math.round(total * 0.20 * 2) / 2);
   const cd  = Math.max(0.5, Math.round(total * 0.15 * 2) / 2);
@@ -20,15 +29,15 @@ function tempoWorkoutHTML(run) {
       <div class="tempo-guide">
         <div class="tg-row">
           <span class="tg-phase wu">Warm-Up</span>
-          <span class="tg-dist">${wu} mi &nbsp;·&nbsp; ${fmtPace(paces.easy)}</span>
+          <span class="tg-dist">${wu} mi &nbsp;·&nbsp; ${fmtPace(easyPace)}</span>
         </div>
         <div class="tg-row">
           <span class="tg-phase tm">Tempo</span>
-          <span class="tg-dist">${tm} mi &nbsp;·&nbsp; ${fmtPace(paces.tempo)}</span>
+          <span class="tg-dist">${tm} mi &nbsp;·&nbsp; ${fmtPace(tempoPace)}</span>
         </div>
         <div class="tg-row">
           <span class="tg-phase cd">Cool-Down</span>
-          <span class="tg-dist">${cd} mi &nbsp;·&nbsp; ${fmtPace(paces.easy)}</span>
+          <span class="tg-dist">${cd} mi &nbsp;·&nbsp; ${fmtPace(easyPace)}</span>
         </div>
       </div>
       <div class="tempo-tip">🎯 Tempo = comfortably hard. Short phrases OK; full conversation = too easy. Target ~80–90% max HR (zone 4).</div>

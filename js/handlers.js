@@ -12,11 +12,15 @@ function applyTypeChange(r) {
   if (!typeEl || typeEl.value === r.type) return;
   r.type  = typeEl.value;
   r.label = TYPE_LABELS[r.type] || r.label;
-  const paces = calcPaces(
-    parseTimeSecs(state.profile?.fiveKTime),
-    parseTimeSecs(state.profile?.tenKTime)
-  );
-  r.estimatedPace = paces[r.type] || r.estimatedPace;
+  if (state.profile?.planType === 'punishment') {
+    r.estimatedPace = calcPunishmentPace(r.type, r.wFE);
+  } else {
+    const paces = calcPaces(
+      parseTimeSecs(state.profile?.fiveKTime),
+      parseTimeSecs(state.profile?.tenKTime)
+    );
+    r.estimatedPace = paces[r.type] || r.estimatedPace;
+  }
 }
 
 // Strip Strava verification from a run (called when date changes)
