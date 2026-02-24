@@ -1,5 +1,5 @@
 import { state, saveState } from './state.js';
-import { parseTimeSecs, parseDate, uid } from './utils.js';
+import { parseTimeSecs, parseDate, uid, dStr } from './utils.js';
 import { TYPE_LABELS } from './constants.js';
 import { COMPLETE_MSGS, SKIP_MSGS, randMsg, showToast, daysSince, isFuture } from './feedback.js';
 import { calcPaces, getPlanTotalWeeks, recalcFuturePaces } from './plan-generator.js';
@@ -296,6 +296,49 @@ export function stravaUnlink(id) {
   import('./render-modal.js').then(m => { m.closeModal(true); m.openModal(id); });
   renderMainContent();
   showToast('Strava activity unlinked', 'warn');
+}
+
+export function handleAddInjury() {
+  const bodyPart  = document.getElementById('inj-part')?.value;
+  const severity  = document.getElementById('inj-severity')?.value;
+  const notes     = document.getElementById('inj-notes')?.value.trim() || '';
+  const startDate = document.getElementById('inj-startdate')?.value || dStr(new Date());
+  if (!bodyPart || !severity) return;
+  if (!state.injuries) state.injuries = [];
+  const existing = state.injuries.find(x => x.bodyPart === bodyPart && !x.resolved);
+  if (existing) { showToast(`Active injury already logged for ${bodyPart}`, 'warn'); return; }
+  state.injuries.push({ id: uid(), bodyPart, severity, notes, startDate, resolved: false });
+  saveState(); closeModal(); renderMainContent();
+  showToast('Injury logged', 'warn');
+}
+
+export function handleUpdateInjury(id) {
+  const inj = (state.injuries || []).find(x => x.id === id);
+  if (!inj) return;
+  inj.bodyPart  = document.getElementById('inj-part')?.value || inj.bodyPart;
+  inj.severity  = document.getElementById('inj-severity')?.value || inj.severity;
+  inj.notes     = document.getElementById('inj-notes')?.value.trim() || '';
+  inj.startDate = document.getElementById('inj-startdate')?.value || inj.startDate;
+  saveState(); closeModal(); renderMainContent();
+  showToast('Injury updated', 'ok');
+}
+
+export function handleResolveInjury(id) {
+  const inj = (state.injuries || []).find(x => x.id === id);
+  if (!inj) return;
+  inj.resolved = true;
+  inj.resolvedDate = dStr(new Date());
+  saveState(); closeModal(); renderMainContent();
+  showToast('Injury marked resolved', 'ok');
+}
+
+export function handleDeleteInjury(id) {
+  if (!state.injuries) return;
+  const idx = state.injuries.findIndex(x => x.id === id);
+  if (idx === -1) return;
+  state.injuries.splice(idx, 1);
+  saveState(); closeModal(); renderMainContent();
+  showToast('Injury removed', 'skip');
 }
 
 export function handleDeleteRun(id) {

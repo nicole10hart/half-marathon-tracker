@@ -2,7 +2,7 @@ import { state } from './state.js';
 import { fmtPace, fmtSecs, parseTimeSecs, friendlyDate, esc } from './utils.js';
 import { calcPaces } from './plan-generator.js';
 import { isFuture } from './feedback.js';
-import { CT_TYPES } from './constants.js';
+import { CT_TYPES, INJURY_PARTS, INJURY_SEVERITY } from './constants.js';
 
 
 function tempoWorkoutHTML(run) {
@@ -134,6 +134,30 @@ export function openModal(runId) {
       }
     </div>` : '';
 
+  // Injuries active on this run's date
+  const runInjuries = (state.injuries || []).filter(inj => {
+    if (inj.startDate > run.date) return false;
+    if (!inj.resolved) return true;
+    if (!inj.resolvedDate) return false;
+    return inj.resolvedDate >= run.date;
+  });
+  const sevColor = { Mild: '#f59e0b', Moderate: '#f97316', Severe: '#ef4444' };
+  const injSection = `
+    <div class="modal-section">
+      <span class="modal-section-label">Injuries</span>
+      ${runInjuries.length ? runInjuries.map(inj => `
+        <div class="modal-inj-row">
+          <span class="modal-inj-dot" style="background:${sevColor[inj.severity] || '#94a3b8'}"></span>
+          <span class="modal-inj-part">${inj.bodyPart}</span>
+          <span class="modal-inj-sev">${inj.severity}</span>
+          <span class="modal-inj-since">since ${inj.startDate}</span>
+          <span style="flex:1"></span>
+          ${!inj.resolved ? `<button class="btn btn-ghost btn-sm" style="font-size:0.68rem;padding:2px 8px" onclick="handleResolveInjury('${inj.id}')">Resolve</button>` : ''}
+          <button class="btn btn-ghost btn-sm" style="font-size:0.68rem;padding:2px 8px" onclick="openInjuryModal('${inj.id}')">Edit</button>
+        </div>`).join('') : '<div style="color:var(--t3);font-size:0.8rem;margin-bottom:6px">No active injuries on this date.</div>'}
+      <button class="btn btn-ghost btn-sm" style="margin-top:6px" onclick="openInjuryModal(null,'${run.date}')">+ Log injury on this date</button>
+    </div>`;
+
   // Action buttons
   const completeBtn = run.completed
     ? `<button class="btn btn-ghost" onclick="handleUncomplete('${run.id}')">Undo Complete</button>`
@@ -188,6 +212,7 @@ export function openModal(runId) {
       ${tempoSection}
       ${actualLogSection}
       ${stravaSection}
+      ${injSection}
 
       <div class="modal-section">
         <span class="modal-section-label">Move to a different date</span>
@@ -394,6 +419,61 @@ export function openCTModal(dateStr, ctId = null) {
           ${isEdit ? 'Update' : 'Save'}
         </button>
         ${isEdit ? `<button class="btn btn-danger full" onclick="handleDeleteCT('${ctId}')">Delete</button>` : ''}
+        <button class="btn btn-ghost full" onclick="closeModal()">Cancel</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+export function openInjuryModal(injuryId = null, prefillDate = null) {
+  closeModal(true);
+  const inj = injuryId ? (state.injuries || []).find(x => x.id === injuryId) : null;
+  const isEdit = !!inj;
+  const defaultDate = inj?.startDate || prefillDate || (new Date().toISOString().slice(0,10));
+
+  const partOptions = INJURY_PARTS.map(p =>
+    `<option value="${p}" ${inj?.bodyPart === p ? 'selected' : ''}>${p}</option>`
+  ).join('');
+
+  const sevOptions = INJURY_SEVERITY.map(s =>
+    `<option value="${s}" ${inj?.severity === s ? 'selected' : ''}>${s}</option>`
+  ).join('');
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'run-modal';
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+  overlay.innerHTML = `
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title">${isEdit ? 'Edit' : 'Log'} Injury</div>
+          ${inj ? `<div class="modal-meta">${inj.bodyPart} · since ${inj.startDate}</div>` : ''}
+        </div>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-section">
+        <span class="modal-section-label">Body Part</span>
+        <select id="inj-part" style="width:100%">${partOptions}</select>
+      </div>
+      <div class="modal-section">
+        <span class="modal-section-label">Severity</span>
+        <select id="inj-severity" style="width:100%">${sevOptions}</select>
+      </div>
+      <div class="modal-section">
+        <span class="modal-section-label">Injury Date</span>
+        <input type="date" id="inj-startdate" value="${defaultDate}" style="width:100%">
+      </div>
+      <div class="modal-section">
+        <span class="modal-section-label">Notes <span style="color:var(--t3);font-weight:400">(optional)</span></span>
+        <textarea id="inj-notes" placeholder="Describe the pain, when it occurs...">${inj?.notes || ''}</textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-primary full" onclick="${isEdit ? `handleUpdateInjury('${injuryId}')` : `handleAddInjury()`}">
+          ${isEdit ? 'Update' : 'Save'}
+        </button>
+        ${isEdit && !inj.resolved ? `<button class="btn btn-success full" onclick="handleResolveInjury('${injuryId}')">Mark Resolved</button>` : ''}
+        ${isEdit ? `<button class="btn btn-danger full" onclick="handleDeleteInjury('${injuryId}')">Delete</button>` : ''}
         <button class="btn btn-ghost full" onclick="closeModal()">Cancel</button>
       </div>
     </div>`;

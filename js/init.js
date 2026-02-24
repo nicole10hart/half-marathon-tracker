@@ -4,11 +4,12 @@ import { filterRunLog } from './render-stats.js';
 import { handleSetup, cancelEdit, openEditProfile,
          resetConfirm, onRaceDateChange, onStartDateChange } from './render-setup.js';
 import { openModal, closeModal, openNewRunModal, updateNewRunTempoBreakdown,
-         openDayCellPicker, openCTModal } from './render-modal.js';
+         openDayCellPicker, openCTModal, openInjuryModal } from './render-modal.js';
 import { handleComplete, handleUncomplete, handleUpdateRun, handleSkip, handleUnskip,
          handleMove, handleSaveNotes, handleAddRun, handleDeleteRun, dayCellClick,
          onDragStart, onDragOver, onDragLeave, onDrop, stravaUnlink,
-         handleAddCT, handleUpdateCT, handleDeleteCT } from './handlers.js';
+         handleAddCT, handleUpdateCT, handleDeleteCT,
+         handleAddInjury, handleUpdateInjury, handleResolveInjury, handleDeleteInjury } from './handlers.js';
 import { stravaExchangeCode, saveStravaSettings, stravaDisconnect,
          linkStravaActivity, confirmStravaLink, declineStravaLink,
          stravaBulkSync, closeBulkSyncModal,
@@ -25,6 +26,7 @@ Object.assign(window, {
   onRaceDateChange, onStartDateChange,
   openModal, closeModal, openNewRunModal, updateNewRunTempoBreakdown,
   openDayCellPicker, openCTModal, handleAddCT, handleUpdateCT, handleDeleteCT,
+  openInjuryModal, handleAddInjury, handleUpdateInjury, handleResolveInjury, handleDeleteInjury,
   handleComplete, handleUncomplete, handleUpdateRun, handleSkip, handleUnskip,
   handleMove, handleSaveNotes, handleAddRun, handleDeleteRun, dayCellClick,
   onDragStart, onDragOver, onDragLeave, onDrop, stravaUnlink,

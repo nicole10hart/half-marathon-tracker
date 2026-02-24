@@ -1,7 +1,7 @@
 import { STATE_KEY } from './constants.js';
 
 // Use const + in-place mutation so imported references stay valid across modules
-export const state = { profile: null, plan: [], view: 'today', strava: null, crossTraining: [] };
+export const state = { profile: null, plan: [], view: 'today', strava: null, crossTraining: [], injuries: [] };
 
 export function loadState() {
   try {

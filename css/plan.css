@@ -213,6 +213,20 @@
   background: rgba(252,76,2,0.18); border-radius: 2px;
   padding: 0 2px; vertical-align: middle; margin-left: 3px;
 }
+.rc-inj {
+  position: absolute;
+  bottom: 4px;
+  right: 5px;
+  font-size: 0.8rem;
+  color: #f59e0b;
+  line-height: 1;
+  pointer-events: none;
+}
+.mob-inj {
+  bottom: 8px;
+  right: 44px; /* sit left of the status circle */
+  font-size: 0.9rem;
+}
 
 /* Strava-verified card — S badge, positioned left of the ✓ badge */
 .run-card.strava-verified::before {

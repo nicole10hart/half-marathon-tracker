@@ -3,8 +3,94 @@ import { dStr, fmtPace } from './utils.js';
 import { getCurrentWeek, getPlanTotalWeeks } from './plan-generator.js';
 import { renderPlanHTML, setupDragListeners } from './render-plan.js';
 import { renderStatsHTML } from './render-stats.js';
+import { WARMUP_EXERCISES } from './constants.js';
 // render-setup imported lazily to avoid circular dependency at module init time
 // (render-setup.js calls renderApp via dynamic import)
+
+// Warm-up exercise IDs per run type
+const WARMUP_ROUTINES = {
+  easy:     ['walk', 'leg-fb', 'ankle', 'high-knees', 'hip-lunge', 'calf-str'],
+  tempo:    ['walk', 'leg-fb', 'leg-side', 'ankle', 'calf-raise', 'high-knees', 'butt-kicks', 'lateral'],
+  long:     ['walk', 'leg-fb', 'leg-side', 'calf-raise', 'hip-lunge', 'high-knees', 'glute-br', 'calf-str'],
+  recovery: ['walk', 'ankle', 'calf-str', 'quad-str', 'hip-lunge', 'itband-str'],
+  race:     ['walk', 'leg-fb', 'leg-side', 'calf-raise', 'high-knees', 'butt-kicks', 'lateral', 'hip-lunge'],
+  rest:     ['walk', 'ankle', 'calf-str', 'quad-str', 'itband-str', 'glute-br'],
+};
+
+// Injury keyword → extra exercise IDs to add
+const INJURY_EXTRAS = [
+  { match: /knee/i,       ids: ['quad-str', 'itband-str', 'glute-br'] },
+  { match: /ankle/i,      ids: ['ankle', 'calf-raise', 'calf-str'] },
+  { match: /calf|achilles/i, ids: ['calf-str', 'calf-raise'] },
+  { match: /shin/i,       ids: ['shin-str', 'calf-str'] },
+  { match: /hip|it band/i,   ids: ['itband-str', 'hip-lunge', 'glute-br'] },
+  { match: /hamstring/i,  ids: ['leg-fb', 'hip-lunge'] },
+  { match: /plantar/i,    ids: ['calf-str', 'ankle', 'shin-str'] },
+  { match: /back/i,       ids: ['glute-br', 'hip-lunge'] },
+];
+
+function buildWarmupIds(runType) {
+  const base = [...(WARMUP_ROUTINES[runType] || WARMUP_ROUTINES.rest)];
+  const activeInjuries = (state.injuries || []).filter(i => !i.resolved);
+  const extras = new Set();
+  activeInjuries.forEach(inj => {
+    INJURY_EXTRAS.forEach(rule => {
+      if (rule.match.test(inj.bodyPart)) rule.ids.forEach(id => extras.add(id));
+    });
+  });
+  // Append injury-specific extras that aren't already in base
+  extras.forEach(id => { if (!base.includes(id)) base.push(id); });
+  return base;
+}
+
+function renderWarmupHTML(runType) {
+  const ids = buildWarmupIds(runType);
+  const exMap = Object.fromEntries(WARMUP_EXERCISES.map(e => [e.id, e]));
+  const activeInjuries = (state.injuries || []).filter(i => !i.resolved);
+  const injNote = activeInjuries.length
+    ? `<div class="warmup-inj-note">Routine adjusted for ${activeInjuries.length} active injur${activeInjuries.length > 1 ? 'ies' : 'y'}.</div>`
+    : '';
+  const items = ids.map((id, i) => {
+    const ex = exMap[id];
+    if (!ex) return '';
+    return `
+      <div class="warmup-row">
+        <div class="warmup-num">${i + 1}</div>
+        <div class="warmup-body">
+          <div class="warmup-name">${ex.name} <span class="warmup-dur">${ex.dur}</span></div>
+          <div class="warmup-desc">${ex.desc}</div>
+        </div>
+      </div>`;
+  }).join('');
+  return `
+    <div class="stats-card">
+      <div class="sc-title">Pre-Run Warm-Up</div>
+      ${injNote}
+      <div class="warmup-list">${items}</div>
+    </div>`;
+}
+
+function renderInjuriesHTML() {
+  const all    = state.injuries || [];
+  const active = all.filter(i => !i.resolved);
+  const sevColor = { Mild: '#f59e0b', Moderate: '#f97316', Severe: '#ef4444' };
+  const chips = active.map(inj => `
+    <div class="inj-chip inj-sev-${inj.severity.toLowerCase()}" onclick="openInjuryModal('${inj.id}')">
+      <span class="inj-chip-dot" style="background:${sevColor[inj.severity] || 'var(--t3)'}"></span>
+      <span class="inj-chip-part">${inj.bodyPart}</span>
+      <span class="inj-chip-sev">${inj.severity}</span>
+    </div>`).join('');
+  const resolvedNote = all.length > active.length
+    ? `<div style="font-size:0.75rem;color:var(--t3);margin-top:6px">${all.length - active.length} resolved</div>` : '';
+  return `
+    <div class="stats-card">
+      <div class="sc-title">Injuries</div>
+      ${active.length
+        ? `<div class="inj-chips">${chips}</div>${resolvedNote}`
+        : `<div style="color:var(--t3);font-size:0.82rem;margin-bottom:10px">No active injuries — great shape!</div>`}
+      <button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="openInjuryModal()">+ Log Injury</button>
+    </div>`;
+}
 
 function renderTodayHTML() {
   const today = dStr(new Date());
@@ -53,6 +139,11 @@ function renderTodayHTML() {
     return d >= mon && d <= sun;
   });
 
+  // Determine run type for warm-up (first non-completed run today, or rest)
+  const todayRunType = todayRuns.find(r => !r.completed && !r.skipped)?.type
+    || todayRuns[0]?.type
+    || 'rest';
+
   return `
     <div class="today-layout fade-in">
 
@@ -66,6 +157,10 @@ function renderTodayHTML() {
         ${runSection}
         <button class="btn btn-ghost btn-sm" style="margin-top:12px" onclick="openDayCellPicker('${today}')">+ Add Activity</button>
       </div>
+
+      ${renderWarmupHTML(todayRunType)}
+
+      ${renderInjuriesHTML()}
 
       <div class="stats-card">
         <div class="sc-title" style="margin-bottom:${ctToday.length ? '10px' : '0'}">Cross Training Today</div>

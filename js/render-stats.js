@@ -395,6 +395,15 @@ function hrSparklineSVG(stream, avgHR) {
     ${avgHR ? `<div class="rl-hr-val">${avgHR}</div>` : ''}`;
 }
 
+function getInjuriesOnDate(dateStr) {
+  return (state.injuries || []).filter(inj => {
+    if (inj.startDate > dateStr) return false;            // hadn't started yet
+    if (!inj.resolved) return true;                       // still ongoing
+    if (!inj.resolvedDate) return false;                  // resolved but unknown when
+    return inj.resolvedDate >= dateStr;                   // resolved on or after this run
+  });
+}
+
 function buildRunLogRows(plan) {
   const sorted = plan
     .filter(r => r.completed)
@@ -409,6 +418,18 @@ function buildRunLogRows(plan) {
     const hrCell      = hrSparklineSVG(r.hrStream, r.avgHR);
     const stravaBadge = r.stravaVerified ? `<span class="rl-strava">S</span>` : '';
 
+    const activeInjuries = getInjuriesOnDate(r.date);
+    const SEV_ORDER = { Mild: 1, Moderate: 2, Severe: 3 };
+    const SEV_COLOR = { Mild: '#f59e0b', Moderate: '#f97316', Severe: '#ef4444' };
+    let injBadge = '';
+    if (activeInjuries.length) {
+      const worst = activeInjuries.reduce((a, b) =>
+        (SEV_ORDER[b.severity] || 0) > (SEV_ORDER[a.severity] || 0) ? b : a
+      );
+      const injColor = SEV_COLOR[worst.severity] || '#f59e0b';
+      injBadge = `<span class="rl-inj" style="color:${injColor}" title="Active injur${activeInjuries.length > 1 ? 'ies' : 'y'}: ${activeInjuries.map(i => i.bodyPart).join(', ')}">!</span>`;
+    }
+
     return `
       <div class="rl-row" data-type="${r.type}">
         <div class="rl-date">${dateStr}</div>
@@ -418,7 +439,7 @@ function buildRunLogRows(plan) {
         <div class="rl-actual"><span class="rl-dist-val">${actualMi} mi</span></div>
         <div class="rl-planned"><span class="rl-plan-val">${r.distance} mi</span></div>
         <div class="rl-pace"><span class="rl-pace-val">${fmtPace(paceVal)}</span></div>
-        <div class="rl-badges">${stravaBadge}<span class="rl-status rl-st-done">✓</span></div>
+        <div class="rl-badges">${injBadge}${stravaBadge}<span class="rl-status rl-st-done">✓</span></div>
       </div>`;
   }).join('');
 }

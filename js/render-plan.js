@@ -5,6 +5,23 @@ import {
 } from './plan-generator.js';
 import { getStats } from './render-stats.js';
 
+const SEV_ORDER = { Mild: 1, Moderate: 2, Severe: 3 };
+const SEV_COLOR = { Mild: '#f59e0b', Moderate: '#f97316', Severe: '#ef4444' };
+
+function worstInjuryColor(date) {
+  const injuries = (state.injuries || []).filter(inj => {
+    if (inj.startDate > date) return false;
+    if (!inj.resolved) return true;
+    if (!inj.resolvedDate) return false;
+    return inj.resolvedDate >= date;
+  });
+  if (!injuries.length) return null;
+  const worst = injuries.reduce((a, b) =>
+    (SEV_ORDER[b.severity] || 0) > (SEV_ORDER[a.severity] || 0) ? b : a
+  );
+  return SEV_COLOR[worst.severity] || '#f59e0b';
+}
+
 export function runCardHTML(run) {
   const cls = [
     'run-card',
@@ -17,6 +34,8 @@ export function runCardHTML(run) {
 
   const typeIcon  = run.type === 'race' ? '🏅' : '';
   const stravaTag = run.stravaVerified ? `<span class="rc-strava-s">S</span>` : '';
+  const injColor  = run.completed ? worstInjuryColor(run.date) : null;
+  const injTag    = injColor ? `<span class="rc-inj" style="color:${injColor}">⚠</span>` : '';
 
   const hasActual = run.completed && run.actualDistance != null && run.actualDistance !== run.distance;
   const distHTML  = hasActual
@@ -32,6 +51,7 @@ export function runCardHTML(run) {
       <div class="rc-type ct-${run.type}">${typeIcon}${run.label}${stravaTag}</div>
       ${distHTML}
       <div class="rc-pace">${fmtPace(run.actualPace ?? run.estimatedPace)}</div>
+      ${injTag}
     </div>`;
 }
 
@@ -93,14 +113,17 @@ export function renderPlanMobileHTML() {
         ? `${r.actualDistance} mi <span class="mob-run-actual">(${r.distance} planned)</span>`
         : `${r.distance} mi`;
       const stravaTag  = r.stravaVerified ? ` <span class="rc-strava-s">S</span>` : '';
+      const injColor   = r.completed ? worstInjuryColor(r.date) : null;
+      const injTag     = injColor ? `<span class="rc-inj mob-inj" style="color:${injColor}">⚠</span>` : '';
       return `
-        <div class="mob-run ${rowCls}" onclick="openModal('${r.id}')">
+        <div class="mob-run ${rowCls}" onclick="openModal('${r.id}')" style="position:relative">
           <div class="mob-run-date">${dateLabel}</div>
           <div class="mob-run-body">
             <div class="mob-run-label ct-${r.type}">${r.label}${stravaTag}</div>
             <div class="mob-run-dist">${distLine} &nbsp;·&nbsp; ${fmtPace(r.actualPace ?? r.estimatedPace)}</div>
           </div>
           <div class="mob-run-status ${stCls}">${stIcon}</div>
+          ${injTag}
         </div>
         ${(ctByDate[r.date]||[]).map(ct =>
           `<div class="ct-item mob-ct-item" onclick="openCTModal(null,'${ct.id}')">${ct.type}${ct.duration ? ` · ${ct.duration} min` : ''}</div>`

@@ -181,6 +181,11 @@
   background: rgba(252,76,2,0.2); border-radius: 3px;
   padding: 1px 4px; letter-spacing: 0.04em;
 }
+.rl-inj {
+  font-size: 0.7rem; font-weight: 900; color: #f59e0b;
+  background: rgba(245,158,11,0.18); border-radius: 3px;
+  padding: 1px 5px; cursor: default;
+}
 .rl-status {
   width: 20px; height: 20px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
@@ -360,3 +365,124 @@
 .hm-leg { display: flex; align-items: center; gap: 4px; font-size: 0.67rem; color: var(--t2); }
 .hm-leg-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
 
+
+/* ============================================================
+   WARM-UP ROUTINE (Today page)
+============================================================ */
+.warmup-list { display: flex; flex-direction: column; gap: 10px; }
+.warmup-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.warmup-num {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(245,158,11,0.15);
+  color: var(--orange);
+  font-size: 0.72rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.warmup-body { flex: 1; min-width: 0; }
+.warmup-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--t1);
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.warmup-dur {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--orange);
+  background: rgba(245,158,11,0.1);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+.warmup-desc {
+  font-size: 0.77rem;
+  color: var(--t3);
+  margin-top: 2px;
+  line-height: 1.4;
+}
+.warmup-inj-note {
+  font-size: 0.75rem;
+  color: #f97316;
+  background: rgba(249,115,22,0.08);
+  border: 1px solid rgba(249,115,22,0.2);
+  border-radius: 6px;
+  padding: 5px 10px;
+  margin-bottom: 10px;
+}
+
+/* ============================================================
+   INJURIES (Today page)
+============================================================ */
+.inj-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.inj-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--card-b);
+  background: var(--bg);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.inj-chip:hover { background: var(--card-b); }
+.inj-chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.inj-chip-part {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--t1);
+}
+.inj-chip-sev {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--t3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Injury rows inside run modal */
+.modal-inj-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--card-b);
+  flex-wrap: wrap;
+}
+.modal-inj-row:last-of-type { border-bottom: none; }
+.modal-inj-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+.modal-inj-part {
+  font-size: 0.82rem; font-weight: 600; color: var(--t1);
+}
+.modal-inj-sev {
+  font-size: 0.68rem; font-weight: 600; color: var(--t3);
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.modal-inj-since {
+  font-size: 0.68rem; color: var(--t3);
+}
