@@ -4,6 +4,7 @@ import { calcPaces } from './plan-generator.js';
 import { isFuture } from './feedback.js';
 import { CT_TYPES } from './constants.js';
 
+
 function tempoWorkoutHTML(run) {
   const paces = calcPaces(
     parseTimeSecs(state.profile.fiveKTime),
@@ -96,7 +97,6 @@ export function openModal(runId) {
       <div style="font-size:0.72rem;color:var(--t3);margin-top:6px">Total will update the distance used for Strava verification.</div>
     </div>` : '';
 
-  // Log/edit actual fields — shown for all non-skipped, non-future runs (including completed)
   const actualLogSection = (!run.skipped && !future) ? `
     <div class="modal-section">
       <span class="modal-section-label">${run.completed ? 'Edit Run Data' : 'Log Actual Run'} <span style="color:var(--t3);font-weight:400;font-size:0.78rem">(optional)</span></span>
@@ -359,6 +359,13 @@ export function openCTModal(dateStr, ctId = null) {
     `<option value="${t}" ${ct?.type === t ? 'selected' : ''}>${t}</option>`
   ).join('');
 
+  const stravaImportBtn = (!isEdit && dateStr && state.strava?.accessToken) ? `
+    <div class="modal-section" style="margin-bottom:16px">
+      <button class="btn btn-ghost strava-link-btn" style="width:100%;justify-content:center" onclick="openStravaCTPicker('${dateStr}')">
+        <span style="color:#fc4c02;font-weight:900;font-size:0.85rem">S</span> Import from Strava
+      </button>
+    </div>` : '';
+
   overlay.innerHTML = `
     <div class="modal-card">
       <div class="modal-header">
@@ -368,6 +375,7 @@ export function openCTModal(dateStr, ctId = null) {
         </div>
         <button class="modal-close" onclick="closeModal()">✕</button>
       </div>
+      ${stravaImportBtn}
       <div class="modal-section">
         <span class="modal-section-label">Activity Type</span>
         <select id="ct-type" style="width:100%;text-transform:capitalize">${typeOptions}</select>

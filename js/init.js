@@ -1,7 +1,7 @@
 import { state, loadState } from './state.js';
 import { renderApp, renderMainContent, switchView } from './render-app.js';
 import { filterRunLog } from './render-stats.js';
-import { renderSetupWizard, handleSetup, cancelEdit, openEditProfile,
+import { handleSetup, cancelEdit, openEditProfile,
          resetConfirm, onRaceDateChange, onStartDateChange } from './render-setup.js';
 import { openModal, closeModal, openNewRunModal, updateNewRunTempoBreakdown,
          openDayCellPicker, openCTModal } from './render-modal.js';
@@ -13,7 +13,9 @@ import { stravaExchangeCode, saveStravaSettings, stravaDisconnect,
          linkStravaActivity, confirmStravaLink, declineStravaLink,
          stravaBulkSync, closeBulkSyncModal,
          linkFromBulk, linkFromBulkSelect,
-         rejectBulkActivity, restoreBulkActivity, addNewFromBulk } from './strava.js';
+         rejectBulkActivity, restoreBulkActivity, addNewFromBulk,
+         linkCTFromBulk, rejectBulkCT,
+         openStravaCTPicker, confirmStravaCTLink } from './strava.js';
 
 // Bridge all onclick-callable functions to window
 Object.assign(window, {
@@ -28,6 +30,7 @@ Object.assign(window, {
   saveStravaSettings, stravaDisconnect, linkStravaActivity, confirmStravaLink, declineStravaLink,
   stravaBulkSync, closeBulkSyncModal,
   linkFromBulk, linkFromBulkSelect, rejectBulkActivity, restoreBulkActivity, addNewFromBulk,
+  linkCTFromBulk, rejectBulkCT, openStravaCTPicker, confirmStravaCTLink,
   filterRunLog,
 });
 

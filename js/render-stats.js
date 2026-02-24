@@ -1,6 +1,6 @@
 import { state } from './state.js';
 import { parseTimeSecs, dStr, fmtSecs, fmtPace, parseDate } from './utils.js';
-import { estimateHalf, getPlanTotalWeeks } from './plan-generator.js';
+import { estimateHalf } from './plan-generator.js';
 import { CT_TYPES } from './constants.js';
 
 export function getStats() {
@@ -57,6 +57,81 @@ export function getStats() {
   return { total, completed, skipped, upcoming, milesComp, milesAll, streak, weeks, halfSecs, stravaVerified, stravaStreak, avgHR, highHR, lowAvgHR };
 }
 
+function trainingHeatmapInnerHTML() {
+  if (!state.plan.length) return '';
+
+  const dates  = state.plan.map(r => r.date).sort();
+  const startD = parseDate(dates[0]);
+  const endD   = parseDate(dates[dates.length - 1]);
+
+  // Align to Sunday of first week / Saturday of last week
+  const sun = new Date(startD); sun.setDate(startD.getDate() - startD.getDay());
+  const sat = new Date(endD);   sat.setDate(endD.getDate() + (6 - endD.getDay()));
+
+  const runsByDate = {};
+  state.plan.forEach(r => { (runsByDate[r.date] = runsByDate[r.date] || []).push(r); });
+  const ctByDate = {};
+  (state.crossTraining || []).forEach(ct => { (ctByDate[ct.date] = ctByDate[ct.date] || []).push(ct); });
+
+  const today = dStr(new Date());
+  const TYPE_COLORS = { easy:'#22c55e', tempo:'#f97316', long:'#3b82f6', recovery:'#a78bfa', race:'#f59e0b' };
+  const TYPE_DIMS   = { easy:'rgba(34,197,94,0.22)', tempo:'rgba(249,115,22,0.22)', long:'rgba(59,130,246,0.22)',
+                        recovery:'rgba(167,139,250,0.22)', race:'rgba(245,158,11,0.28)' };
+
+  const cells = [];
+  const cur = new Date(sun);
+  while (cur <= sat) {
+    const ds   = dStr(cur);
+    const runs = runsByDate[ds] || [];
+    const cts  = ctByDate[ds]  || [];
+
+    let color, title;
+    if (runs.length) {
+      const done  = runs.find(r => r.completed);
+      const skip  = runs.find(r => r.skipped);
+      const sched = runs.find(r => !r.completed && !r.skipped);
+      const p = done || sched || skip;
+      if (p.completed) {
+        color = TYPE_COLORS[p.type] || '#94a3b8';
+        title = `${ds}: ${p.label} — done`;
+      } else if (p.skipped) {
+        color = 'rgba(239,68,68,0.4)';
+        title = `${ds}: ${p.label} — skipped`;
+      } else if (ds > today) {
+        color = TYPE_DIMS[p.type] || 'rgba(148,163,184,0.18)';
+        title = `${ds}: ${p.label} — scheduled`;
+      } else {
+        color = 'rgba(239,68,68,0.2)';
+        title = `${ds}: ${p.label} — missed`;
+      }
+    } else if (cts.length) {
+      color = 'rgba(56,189,248,0.65)';
+      title = `${ds}: ${cts.map(c => c.type).join(', ')}`;
+    } else {
+      color = 'rgba(255,255,255,0.04)';
+      title = ds;
+    }
+    cells.push(`<div class="hm-cell" style="background:${color}" title="${title}"></div>`);
+    cur.setDate(cur.getDate() + 1);
+  }
+
+  return `
+    <div class="heatmap-legend">
+      <span class="hm-leg"><span class="hm-leg-dot" style="background:#22c55e"></span>Easy</span>
+      <span class="hm-leg"><span class="hm-leg-dot" style="background:#f97316"></span>Tempo</span>
+      <span class="hm-leg"><span class="hm-leg-dot" style="background:#3b82f6"></span>Long</span>
+      <span class="hm-leg"><span class="hm-leg-dot" style="background:#a78bfa"></span>Recovery</span>
+      <span class="hm-leg"><span class="hm-leg-dot" style="background:#38bdf8"></span>Cross Train</span>
+      <span class="hm-leg"><span class="hm-leg-dot" style="background:rgba(239,68,68,0.5)"></span>Skipped</span>
+    </div>
+    <div class="heatmap-wrapper">
+      <div class="hm-day-labels">
+        ${['S','M','T','W','T','F','S'].map(d => `<div>${d}</div>`).join('')}
+      </div>
+      <div class="heatmap-grid">${cells.join('')}</div>
+    </div>`;
+}
+
 function ctStatsCardHTML() {
   const ct = state.crossTraining;
   if (!ct?.length) return '';
@@ -99,26 +174,6 @@ export function renderStatsHTML() {
   const stats = getStats();
   const pct = stats.total ? Math.round((stats.completed / stats.total) * 100) : 0;
 
-  const weeks  = Object.keys(stats.weeks).map(Number).sort((a,b)=>a-b);
-  const maxMi  = Math.max(...weeks.map(w => stats.weeks[w].planned), 1);
-  const BW = 26, BG = 5, CH = 32, CP = 6;
-  const totalW = weeks.length * (BW + BG) - BG;
-  const raceWk = getPlanTotalWeeks();
-
-  const bars = weeks.map((w, i) => {
-    const wd = stats.weeks[w];
-    const x  = i * (BW + BG);
-    const ph = ((wd.planned  / maxMi) * (CH - CP));
-    const ch = ((wd.comp     / maxMi) * (CH - CP));
-    const sh = ((wd.skip     / maxMi) * (CH - CP));
-    return `
-      <rect x="${x}" y="${CH-ph}" width="${BW}" height="${ph}" rx="3" fill="rgba(255,255,255,0.06)"/>
-      <rect x="${x}" y="${CH-ch}" width="${BW}" height="${ch}" rx="3" fill="#22c55e" opacity="0.85"/>
-      ${sh ? `<rect x="${x}" y="${CH-sh}" width="${BW}" height="${sh}" rx="3" fill="#ef4444" opacity="0.75"/>` : ''}
-      <text x="${x+BW/2}" y="${CH+13}" text-anchor="middle" fill="#475569" font-size="8.5" font-family="system-ui">${w===raceWk?'R':w}</text>
-    `;
-  }).join('');
-
   const types = ['easy','tempo','long','recovery','race'];
   const typeColors = { easy:'var(--green)', tempo:'var(--orange)', long:'var(--blue)', recovery:'var(--purple)', race:'var(--gold)' };
   const typeBreakdown = types.map(t => {
@@ -152,15 +207,8 @@ export function renderStatsHTML() {
             </div>` : ''}
           </div>
           <div style="min-width:0;display:flex;flex-direction:column">
-            <div class="sc-title">Weekly Mileage</div>
-            <div style="flex:1;min-height:${CH+22}px">
-              <svg width="100%" height="100%"
-                   viewBox="0 0 ${Math.max(totalW, 280)} ${CH+22}"
-                   preserveAspectRatio="none"
-                   style="display:block;min-height:${CH+22}px">
-                ${bars}
-              </svg>
-            </div>
+            <div class="sc-title">Training Calendar</div>
+            ${trainingHeatmapInnerHTML()}
           </div>
           <div style="display:flex;flex-direction:column">
             <div class="sc-title">Completion</div>
@@ -358,7 +406,7 @@ function buildRunLogRows(plan) {
     const dateStr  = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
     const actualMi = r.actualDistance ?? r.distance;
     const paceVal  = r.actualPace ?? r.estimatedPace;
-    const hrCell   = hrSparklineSVG(r.hrStream, r.avgHR);
+    const hrCell      = hrSparklineSVG(r.hrStream, r.avgHR);
     const stravaBadge = r.stravaVerified ? `<span class="rl-strava">S</span>` : '';
 
     return `

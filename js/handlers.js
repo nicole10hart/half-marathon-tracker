@@ -1,5 +1,5 @@
 import { state, saveState } from './state.js';
-import { parseTimeSecs, dStr, parseDate, uid } from './utils.js';
+import { parseTimeSecs, parseDate, uid } from './utils.js';
 import { TYPE_LABELS } from './constants.js';
 import { COMPLETE_MSGS, SKIP_MSGS, randMsg, showToast, daysSince, isFuture } from './feedback.js';
 import { calcPaces, getPlanTotalWeeks } from './plan-generator.js';
@@ -75,8 +75,8 @@ export function handleComplete(id, confirmed) {
     }
   }
 
-  r.completed = true;
-  r.skipped   = false;
+  r.completed      = true;
+  r.skipped        = false;
   r.actualDistance = (actDist !== r.distance) ? actDist : null;
   r.actualPace     = (actPace && actPace !== r.estimatedPace) ? actPace : null;
 

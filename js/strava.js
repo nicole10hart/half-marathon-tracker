@@ -1,6 +1,36 @@
 import { state, saveState } from './state.js';
-import { parseDate, fmtPace, friendlyDate, esc, dStr } from './utils.js';
+import { parseDate, fmtPace, friendlyDate, esc, dStr, uid } from './utils.js';
 import { showToast } from './feedback.js';
+
+// Strava sport_type → CT_TYPES mapping
+const STRAVA_TO_CT = {
+  Ride: 'biking',           VirtualRide: 'biking',        EBikeRide: 'biking',
+  Swim: 'swimming',
+  Yoga: 'yoga',
+  WeightTraining: 'weightlifting',
+  Workout: 'hiit',          CrossFit: 'crossfit',
+  Hike: 'hiking',           Walk: 'hiking',
+  Elliptical: 'elliptical',
+  RockClimbing: 'climbing',
+  Rowing: 'rowing',         VirtualRow: 'rowing',
+  Kayaking: 'kayaking',     StandUpPaddling: 'kayaking',
+  Surfing: 'surfing',
+  Skateboard: 'skateboarding',
+  Soccer: 'soccer',         Football: 'soccer',
+  Tennis: 'tennis',         Pickleball: 'tennis',          Badminton: 'tennis',
+  Basketball: 'basketball',
+  AlpineSki: 'skiing',      BackcountrySki: 'skiing',       NordicSki: 'skiing',
+  Golf: 'golf',
+  Dance: 'dance',
+  MartialArts: 'martial arts',
+  Pilates: 'pilates',
+  Volleyball: 'volleyball',
+  Spinning: 'spinning',
+};
+
+function stravaActivityCTType(a) {
+  return STRAVA_TO_CT[a.sport_type] || STRAVA_TO_CT[a.type] || null;
+}
 
 export function stravaIsConnected() { return !!(state.strava?.accessToken); }
 export function stravaRedirectUri()  { return window.location.origin + window.location.pathname; }
@@ -219,7 +249,8 @@ export function confirmStravaLink(runId, activityId, distanceM, movingTimeSecs, 
 
 // ─── Bulk Sync ────────────────────────────────────────────────────────────────
 
-let _bulkActivities = []; // activities loaded for the current bulk sync session
+let _bulkActivities   = []; // run activities for current bulk sync session
+let _bulkCTActivities = []; // CT activities for current bulk sync session
 
 async function fetchStravaActivitiesRange(startDateStr, endDateStr) {
   const ok = await stravaRefreshIfNeeded();
@@ -244,7 +275,7 @@ async function fetchStravaActivitiesRange(startDateStr, endDateStr) {
       showToast(`Strava: ${data?.message || 'API error'}`, 'warn');
       return null;
     }
-    return data.filter(a => a.type === 'Run' || a.sport_type === 'Run');
+    return data; // all activity types — callers filter as needed
   } catch(e) {
     showToast('Could not reach Strava — check your network', 'warn');
     return null;
@@ -263,18 +294,26 @@ export async function stravaBulkSync() {
   const btn = document.getElementById('strava-sync-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'Fetching…'; }
 
-  const activities = await fetchStravaActivitiesRange(startDate, endDate);
+  const allActivities = await fetchStravaActivitiesRange(startDate, endDate);
   if (btn) { btn.disabled = false; btn.textContent = 'Sync Strava'; }
-  if (activities === null) return;
+  if (allActivities === null) return;
 
-  const alreadyLinked = new Set(state.plan.map(r => r.stravaActivityId).filter(Boolean));
-  _bulkActivities = activities.filter(a => !alreadyLinked.has(String(a.id)));
+  const alreadyLinkedRuns = new Set(state.plan.map(r => r.stravaActivityId).filter(Boolean));
+  const alreadyLinkedCT   = new Set((state.crossTraining || []).map(c => c.stravaActivityId).filter(Boolean));
+
+  _bulkActivities = allActivities
+    .filter(a => a.type === 'Run' || a.sport_type === 'Run')
+    .filter(a => !alreadyLinkedRuns.has(String(a.id)));
+
+  _bulkCTActivities = allActivities
+    .filter(a => stravaActivityCTType(a) !== null && a.type !== 'Run' && a.sport_type !== 'Run')
+    .filter(a => !alreadyLinkedCT.has(String(a.id)));
 
   const rejectedIds = new Set((state.strava?.rejectedActivities || []).map(r => String(r.id)));
-  const hasActive   = _bulkActivities.some(a => !rejectedIds.has(String(a.id)));
+  const hasActive   = _bulkActivities.some(a => !rejectedIds.has(String(a.id))) || _bulkCTActivities.length > 0;
   const hasRejected = (state.strava?.rejectedActivities || []).length > 0;
 
-  if (!hasActive && !hasRejected) { showToast('All Strava runs already linked!', 'ok'); return; }
+  if (!hasActive && !hasRejected) { showToast('All Strava activities already linked!', 'ok'); return; }
   showStravaBulkModal(startDate, endDate);
 }
 
@@ -358,10 +397,51 @@ function buildBulkModalBody() {
       }).join('')}
     </div>` : '';
 
-  if (!dateCards && !rejectedHTML) {
-    return '<div class="rl-empty">All Strava runs already linked — nothing to sync.</div>';
+  // CT section
+  const alreadyLinkedCT = new Set((state.crossTraining || []).map(c => c.stravaActivityId).filter(Boolean));
+  const availableCT = _bulkCTActivities.filter(a => !alreadyLinkedCT.has(String(a.id)));
+  let ctHTML = '';
+  if (availableCT.length) {
+    const ctDateMap = new Map();
+    for (const a of availableCT) {
+      const date = a.start_date_local.substring(0, 10);
+      if (!ctDateMap.has(date)) ctDateMap.set(date, []);
+      ctDateMap.get(date).push(a);
+    }
+    const ctCards = [...ctDateMap.keys()].sort().map(date => {
+      const acts      = ctDateMap.get(date);
+      const d         = parseDate(date);
+      const dateLabel = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      const actsHTML  = acts.map(a => {
+        const ctType = stravaActivityCTType(a);
+        const dur    = Math.round(a.moving_time / 60);
+        return `
+          <div class="bulk-strava-act" style="border-color:rgba(56,189,248,0.25)">
+            <div class="bulk-act-name">${esc(a.name)}</div>
+            <div class="bulk-act-meta" style="color:#38bdf8">${ctType} &nbsp;·&nbsp; ${dur} min</div>
+            <div class="bulk-act-btns">
+              <button class="btn btn-sm" style="border-color:rgba(56,189,248,0.4);color:#38bdf8" onclick="linkCTFromBulk('${a.id}')">Log CT</button>
+              <button class="btn btn-ghost btn-sm" onclick="rejectBulkCT('${a.id}')">Reject</button>
+            </div>
+          </div>`;
+      }).join('');
+      return `
+        <div class="bulk-date-card">
+          <div class="bulk-date-hdr">${dateLabel}</div>
+          ${actsHTML}
+        </div>`;
+    }).join('');
+    ctHTML = `
+      <div class="bulk-section-hdr" style="color:#38bdf8;border-top:1px solid var(--border);padding-top:14px;margin-top:4px">
+        Cross Training (${availableCT.length})
+      </div>
+      ${ctCards}`;
   }
-  return dateCards + rejectedHTML;
+
+  if (!dateCards && !rejectedHTML && !ctHTML) {
+    return '<div class="rl-empty">All Strava activities already linked — nothing to sync.</div>';
+  }
+  return (dateCards || '') + rejectedHTML + ctHTML;
 }
 
 function showStravaBulkModal(startDate, endDate) {
@@ -379,7 +459,7 @@ function showStravaBulkModal(startDate, endDate) {
         <div>
           <div class="modal-badge" style="background:rgba(252,76,2,0.15);color:#fc4c02">STRAVA SYNC</div>
           <div class="modal-title">Sync Activities</div>
-          <div class="modal-meta">${fmt(startDate)} – ${fmt(endDate)} &nbsp;·&nbsp; ${_bulkActivities.length} run${_bulkActivities.length !== 1 ? 's' : ''} found</div>
+          <div class="modal-meta">${fmt(startDate)} – ${fmt(endDate)} &nbsp;·&nbsp; ${_bulkActivities.length} run${_bulkActivities.length !== 1 ? 's' : ''}, ${_bulkCTActivities.length} cross-training found</div>
         </div>
         <button class="modal-close" onclick="closeBulkSyncModal()">✕</button>
       </div>
@@ -396,7 +476,8 @@ function showStravaBulkModal(startDate, endDate) {
 export function closeBulkSyncModal() {
   const modal = document.getElementById('bulk-sync-modal');
   if (modal) modal.remove();
-  _bulkActivities = [];
+  _bulkActivities   = [];
+  _bulkCTActivities = [];
   import('./render-app.js').then(m => m.renderMainContent());
 }
 
@@ -471,6 +552,123 @@ export function addNewFromBulk(dateStr, activityId, distanceM, movingTimeSecs, a
   if (modal) modal.remove();
   _bulkActivities = [];
   import('./render-modal.js').then(m => m.openNewRunModal(dateStr));
+}
+
+export function linkCTFromBulk(activityId) {
+  const act = _bulkCTActivities.find(a => String(a.id) === String(activityId));
+  if (!act) return;
+  const ctType = stravaActivityCTType(act);
+  const dateStr = act.start_date_local.substring(0, 10);
+  if (!state.crossTraining) state.crossTraining = [];
+  state.crossTraining.push({
+    id: uid(), date: dateStr, type: ctType,
+    duration: Math.round(act.moving_time / 60),
+    notes: act.name, stravaActivityId: String(act.id),
+  });
+  _bulkCTActivities = _bulkCTActivities.filter(a => String(a.id) !== String(activityId));
+  saveState();
+  const body = document.getElementById('bulk-sync-body');
+  if (body) body.innerHTML = buildBulkModalBody();
+  showToast(`${ctType} logged from Strava`, 'ok');
+}
+
+export function rejectBulkCT(activityId) {
+  _bulkCTActivities = _bulkCTActivities.filter(a => String(a.id) !== String(activityId));
+  const body = document.getElementById('bulk-sync-body');
+  if (body) body.innerHTML = buildBulkModalBody();
+}
+
+export async function openStravaCTPicker(dateStr) {
+  const ok = await stravaRefreshIfNeeded();
+  if (!ok || !state.strava?.accessToken) {
+    showToast('Strava not connected', 'warn');
+    return;
+  }
+  try {
+    const d  = parseDate(dateStr);
+    const af = Math.floor(new Date(d.getFullYear(), d.getMonth(), d.getDate(),  0,  0,  0).getTime() / 1000);
+    const bf = Math.floor(new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59).getTime() / 1000);
+    const res  = await fetch(
+      `https://www.strava.com/api/v3/athlete/activities?before=${bf}&after=${af}&per_page=30`,
+      { headers: { Authorization: `Bearer ${state.strava.accessToken}` } }
+    );
+    const data = await res.json();
+    if (!Array.isArray(data)) {
+      showToast('Strava: could not fetch activities', 'warn');
+      return;
+    }
+    const alreadyLinked = new Set((state.crossTraining || []).map(c => c.stravaActivityId).filter(Boolean));
+    const ctActs = data.filter(a =>
+      stravaActivityCTType(a) !== null &&
+      a.type !== 'Run' && a.sport_type !== 'Run' &&
+      !alreadyLinked.has(String(a.id))
+    );
+    if (!ctActs.length) {
+      showToast('No cross-training activities on Strava for this date', 'warn');
+      return;
+    }
+    showStravaCTPickerModal(dateStr, ctActs);
+  } catch(e) {
+    showToast('Could not reach Strava — check your network', 'warn');
+  }
+}
+
+function showStravaCTPickerModal(dateStr, acts) {
+  import('./render-modal.js').then(m => {
+    m.closeModal(true);
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.id = 'run-modal';
+    overlay.addEventListener('click', e => { if (e.target === overlay) m.closeModal(); });
+
+    const items = acts.map(a => {
+      const ctType = stravaActivityCTType(a);
+      const dur    = Math.round(a.moving_time / 60);
+      const t      = new Date(a.start_date_local);
+      const tm     = t.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+      const st     = a.sport_type || a.type;
+      return `
+        <div class="strava-pick-item" onclick="confirmStravaCTLink('${dateStr}','${a.id}',${a.moving_time},'${st}')">
+          <div class="spi-name">${esc(a.name)}</div>
+          <div class="spi-meta">${ctType} &nbsp;·&nbsp; ${tm} &nbsp;·&nbsp; ${dur} min</div>
+        </div>`;
+    }).join('');
+
+    overlay.innerHTML = `
+      <div class="modal-card">
+        <div class="modal-header">
+          <div>
+            <div class="modal-badge" style="background:rgba(252,76,2,0.15);color:#fc4c02">STRAVA</div>
+            <div class="modal-title">Import Cross Training</div>
+            <div class="modal-meta">Activities on ${friendlyDate(dateStr)}</div>
+          </div>
+          <button class="modal-close" onclick="openCTModal('${dateStr}')">✕</button>
+        </div>
+        <div class="strava-pick-list">${items}</div>
+        <div style="margin-top:14px">
+          <button class="btn btn-ghost" onclick="openCTModal('${dateStr}')">Back</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+  });
+}
+
+export function confirmStravaCTLink(dateStr, activityId, movingTime, sportType) {
+  const ctType = STRAVA_TO_CT[sportType] || sportType;
+  if (!state.crossTraining) state.crossTraining = [];
+  if (state.crossTraining.some(c => c.stravaActivityId === String(activityId))) {
+    showToast('Already linked', 'warn');
+    return;
+  }
+  state.crossTraining.push({
+    id: uid(), date: dateStr, type: ctType,
+    duration: Math.round(movingTime / 60),
+    notes: '', stravaActivityId: String(activityId),
+  });
+  saveState();
+  import('./render-modal.js').then(m => m.closeModal());
+  import('./render-app.js').then(m => m.renderMainContent());
+  showToast(`${ctType} logged from Strava`, 'ok');
 }
 
 async function fetchAndStoreHRStream(run, activityId) {
