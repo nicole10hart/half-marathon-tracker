@@ -2,6 +2,9 @@ import { LONG_FROM_END, DAYS_FULL } from './constants.js';
 import { parseTimeSecs, dStr, parseDate, uid } from './utils.js';
 import { state } from './state.js';
 
+// Additive offsets from reference pace (seconds/mile) per run type
+const PACE_OFFSETS = { easy: 90, long: 90, tempo: 18, recovery: 120 };
+
 // wFE = weeksFromEnd (0 = race week, 1 = last training week, …)
 export function isCutbackWFE(wFE) {
   return wFE === 2 || wFE === 5 || (wFE >= 9 && (wFE - 9) % 4 === 0);
@@ -42,6 +45,38 @@ export function estimateHalf(fiveKSecs, tenKSecs) {
   }
   if (fiveKSecs) return fiveKSecs * Math.pow(13.1/3.1, 1.06);
   return tenKSecs * Math.pow(13.1/6.2, 1.06);
+}
+
+// Adjust estimated paces for all uncompleted runs based on recent actual performance.
+// Uses the last 8 completed runs with logged actual paces, weighted toward the most recent.
+// Requires at least 3 data points before making any adjustment.
+export function recalcFuturePaces() {
+  const withActual = state.plan
+    .filter(r => r.completed && r.actualPace && PACE_OFFSETS[r.type] != null)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  if (withActual.length < 3) return;
+
+  // Infer a reference pace from each run, weight linearly toward most recent
+  const recent = withActual.slice(-8);
+  let weightSum = 0, refSum = 0;
+  recent.forEach((r, i) => {
+    const w = i + 1;
+    refSum    += (r.actualPace - PACE_OFFSETS[r.type]) * w;
+    weightSum += w;
+  });
+  const newRef = refSum / weightSum;
+
+  const newPaces = {
+    easy:     newRef + 90,
+    long:     newRef + 90,
+    tempo:    newRef + 18,
+    recovery: newRef + 120,
+    race:     newRef * 1.08,
+  };
+
+  state.plan
+    .filter(r => !r.completed && !r.skipped && newPaces[r.type] != null)
+    .forEach(r => { r.estimatedPace = Math.round(newPaces[r.type]); });
 }
 
 export function calcTotalWeeks(startDateStr, raceDateStr) {

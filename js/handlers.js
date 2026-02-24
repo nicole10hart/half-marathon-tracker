@@ -2,7 +2,7 @@ import { state, saveState } from './state.js';
 import { parseTimeSecs, parseDate, uid } from './utils.js';
 import { TYPE_LABELS } from './constants.js';
 import { COMPLETE_MSGS, SKIP_MSGS, randMsg, showToast, daysSince, isFuture } from './feedback.js';
-import { calcPaces, getPlanTotalWeeks } from './plan-generator.js';
+import { calcPaces, getPlanTotalWeeks, recalcFuturePaces } from './plan-generator.js';
 import { renderMainContent } from './render-app.js';
 import { closeModal, openDayCellPicker } from './render-modal.js';
 
@@ -80,6 +80,7 @@ export function handleComplete(id, confirmed) {
   r.actualDistance = (actDist !== r.distance) ? actDist : null;
   r.actualPace     = (actPace && actPace !== r.estimatedPace) ? actPace : null;
 
+  recalcFuturePaces();
   saveState(); closeModal(); renderMainContent();
   showToast(randMsg(COMPLETE_MSGS), 'ok');
 }
@@ -126,6 +127,7 @@ export function handleUpdateRun(id) {
   r.actualDistance = (actDist !== r.distance) ? actDist : null;
   r.actualPace     = (actPace && actPace !== r.estimatedPace) ? actPace : null;
 
+  recalcFuturePaces();
   saveState(); closeModal(); renderMainContent();
   showToast('Run data updated', 'ok');
 }

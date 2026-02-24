@@ -1,6 +1,7 @@
 import { state, saveState } from './state.js';
 import { parseDate, fmtPace, friendlyDate, esc, dStr, uid } from './utils.js';
 import { showToast } from './feedback.js';
+import { recalcFuturePaces } from './plan-generator.js';
 
 // Strava sport_type → CT_TYPES mapping
 const STRAVA_TO_CT = {
@@ -239,6 +240,7 @@ export function confirmStravaLink(runId, activityId, distanceM, movingTimeSecs, 
   run.actualPace       = (pace   !== run.estimatedPace) ? pace : null;
   run.avgHR            = avgHR > 0 ? Math.round(avgHR) : null;
   run.maxHR            = maxHR > 0 ? Math.round(maxHR) : null;
+  recalcFuturePaces();
   saveState();
   import('./render-modal.js').then(m => m.closeModal());
   import('./render-app.js').then(m => m.renderMainContent());
@@ -528,6 +530,7 @@ export function linkFromBulk(planRunId, activityId, distanceM, movingTimeSecs, a
   run.maxHR                = maxHR > 0 ? Math.round(maxHR) : null;
   run.completed            = true;
   run.skipped              = false;
+  recalcFuturePaces();
   saveState();
   // Close bulk modal and open the run's completion modal for review
   const modal = document.getElementById('bulk-sync-modal');
@@ -558,6 +561,7 @@ export function quickLinkFromBulk(planRunId, activityId, distanceM, movingTimeSe
   run.maxHR            = maxHR > 0 ? Math.round(maxHR) : null;
   run.completed        = true;
   run.skipped          = false;
+  recalcFuturePaces();
   saveState();
   _bulkActivities = _bulkActivities.filter(a => String(a.id) !== String(activityId));
   const body = document.getElementById('bulk-sync-body');
@@ -620,6 +624,7 @@ export function acceptAllBulk() {
   }
   _bulkActivities   = _bulkActivities.filter(a => !linkedIds.has(String(a.id)));
   _bulkCTActivities = [];
+  recalcFuturePaces();
   saveState();
   const body = document.getElementById('bulk-sync-body');
   if (body) body.innerHTML = buildBulkModalBody();
