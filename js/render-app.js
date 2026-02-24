@@ -139,10 +139,9 @@ function renderTodayHTML() {
     return d >= mon && d <= sun;
   });
 
-  // Determine run type for warm-up (first non-completed run today, or rest)
-  const todayRunType = todayRuns.find(r => !r.completed && !r.skipped)?.type
-    || todayRuns[0]?.type
-    || 'rest';
+  // Determine run type for warm-up (only show if a run is scheduled today)
+  const activeRun    = todayRuns.find(r => !r.completed && !r.skipped) || todayRuns[0];
+  const todayRunType = activeRun?.type || null;
 
   return `
     <div class="today-layout fade-in">
@@ -158,7 +157,7 @@ function renderTodayHTML() {
         <button class="btn btn-ghost btn-sm" style="margin-top:12px" onclick="openDayCellPicker('${today}')">+ Add Activity</button>
       </div>
 
-      ${renderWarmupHTML(todayRunType)}
+      ${todayRunType ? renderWarmupHTML(todayRunType) : ''}
 
       ${renderInjuriesHTML()}
 
