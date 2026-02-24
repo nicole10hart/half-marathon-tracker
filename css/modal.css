@@ -327,15 +327,17 @@ textarea {
 .picker-btn.ct:hover  { background: rgba(56,189,248,0.08); }
 
 /* ============================================================
-   GUIDED WARM-UP OVERLAY
+   GUIDED WARM-UP / COOL-DOWN OVERLAYS
 ============================================================ */
-#warmup-guide {
+#warmup-guide,
+#cooldown-guide {
   --wg-color: #f97316;
   position: fixed; inset: 0; z-index: 300;
   background: var(--bg);
   display: flex; flex-direction: column;
   overflow: hidden;
 }
+#cooldown-guide { --wg-color: #3b82f6; }
 .wg-progress-bar {
   height: 4px; background: rgba(255,255,255,0.06); flex-shrink: 0;
 }

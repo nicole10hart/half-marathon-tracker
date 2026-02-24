@@ -48,6 +48,8 @@ body::before {
 .btn-primary:hover:not(:disabled) { background: var(--orange2); transform: translateY(-1px); box-shadow: 0 4px 16px rgba(249,115,22,0.35); }
 .btn-success { background: var(--green); color: #fff; }
 .btn-success:hover:not(:disabled) { background: #16a34a; }
+.btn-blue    { background: #3b82f6; color: #fff; }
+.btn-blue:hover:not(:disabled) { background: #2563eb; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(59,130,246,0.35); }
 .btn-danger  { background: var(--red); color: #fff; }
 .btn-danger:hover:not(:disabled) { background: #dc2626; }
 .btn-sm { padding: 4px 9px; font-size: 0.76rem; }

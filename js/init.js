@@ -1,9 +1,10 @@
 import { state, loadState } from './state.js';
 import { renderApp, renderMainContent, switchView,
-         openWarmupGuide, warmupStep, warmupJump, closeWarmupGuide, finishWarmupGuide } from './render-app.js';
+         openWarmupGuide, warmupStep, warmupJump, closeWarmupGuide, finishWarmupGuide,
+         openCooldownGuide, cooldownStep, cooldownJump, closeCooldownGuide, finishCooldownGuide } from './render-app.js';
 import { filterRunLog } from './render-stats.js';
 import { handleSetup, cancelEdit, openEditProfile,
-         resetConfirm, onRaceDateChange, onStartDateChange } from './render-setup.js';
+         resetConfirm, onRaceDateChange, onStartDateChange, selectPlanType } from './render-setup.js';
 import { openModal, closeModal, openNewRunModal, updateNewRunTempoBreakdown,
          openDayCellPicker, openCTModal, openInjuryModal } from './render-modal.js';
 import { handleComplete, handleUncomplete, handleUpdateRun, handleSkip, handleUnskip,
@@ -23,8 +24,9 @@ import { stravaExchangeCode, saveStravaSettings, stravaDisconnect,
 // Bridge all onclick-callable functions to window
 Object.assign(window, {
   switchView, openWarmupGuide, warmupStep, warmupJump, closeWarmupGuide, finishWarmupGuide,
+  openCooldownGuide, cooldownStep, cooldownJump, closeCooldownGuide, finishCooldownGuide,
   openEditProfile, handleSetup, cancelEdit, resetConfirm,
-  onRaceDateChange, onStartDateChange,
+  onRaceDateChange, onStartDateChange, selectPlanType,
   openModal, closeModal, openNewRunModal, updateNewRunTempoBreakdown,
   openDayCellPicker, openCTModal, handleAddCT, handleUpdateCT, handleDeleteCT,
   openInjuryModal, handleAddInjury, handleUpdateInjury, handleResolveInjury, handleDeleteInjury,
@@ -61,6 +63,7 @@ loadState();
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
       closeWarmupGuide();
+      closeCooldownGuide();
       closeModal();
       // Close settings overlay (edit mode only — don't close initial setup)
       if (state.profile) document.getElementById('setup-overlay')?.remove();

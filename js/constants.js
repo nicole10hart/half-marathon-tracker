@@ -45,6 +45,29 @@ export const WARMUP_EXERCISES = [
   { id: 'shin-str',   name: 'Shin & Foot Stretch',      dur: '30 sec each side',  desc: 'Kneel with tops of feet flat on ground. Stretches shins and foot extensors.' },
 ];
 
+// Cool-down exercises: post-run recovery sequence { id, name, dur, desc }
+export const COOLDOWN_EXERCISES = [
+  { id: 'cd-walk',    name: 'Easy Walk',               dur: '3–5 min',          desc: 'Slow your pace to a gentle walk. Let your heart rate come down naturally — don\'t stop cold.' },
+  { id: 'cd-calf',   name: 'Calf Stretch',             dur: '30 sec each side', desc: 'Hands on wall, one foot back with heel flat. Press gently into the floor. Targets calf and achilles.' },
+  { id: 'cd-quad',   name: 'Quad Stretch',             dur: '30 sec each side', desc: 'Balance on one foot, pull the other ankle toward your glute. Keep hips square and standing leg soft.' },
+  { id: 'cd-ham',    name: 'Hamstring Reach',          dur: '30 sec each side', desc: 'Step one foot forward, hinge at the hips, reach toward your toes. Keep the back leg softly bent.' },
+  { id: 'cd-hip',    name: 'Hip Flexor Lunge',         dur: '30 sec each side', desc: 'Lunge with back knee on the ground, sink hips forward. Relieves tightness from the running stride.' },
+  { id: 'cd-it',     name: 'IT Band Cross Stretch',    dur: '30 sec each side', desc: 'Cross one leg behind the other against a wall, lean sideways. Targets the outer thigh and IT band.' },
+  { id: 'cd-glute',  name: 'Seated Glute Stretch',     dur: '30 sec each side', desc: 'Sit, cross one ankle over the opposite knee, lean forward gently. Relieves deep glute tension.' },
+  { id: 'cd-pigeon', name: 'Low Pigeon Hold',          dur: '45 sec each side', desc: 'From a lunge, slide the front shin across. A deeper hip opener — breathe into the stretch.' },
+  { id: 'cd-back',   name: 'Cat-Cow Spinal Rolls',     dur: '10 reps',          desc: 'On all fours, alternate arching and rounding the back. Relieves lumbar tension from the run.' },
+  { id: 'cd-breath', name: 'Deep Breathing',           dur: '1 min',            desc: 'Lie on your back. Inhale 4 counts, hold 4, exhale 6. Signals your nervous system to recover.' },
+];
+
+export const COOLDOWN_ROUTINES = {
+  easy:     ['cd-walk', 'cd-calf', 'cd-quad', 'cd-ham', 'cd-glute', 'cd-breath'],
+  tempo:    ['cd-walk', 'cd-calf', 'cd-quad', 'cd-ham', 'cd-hip', 'cd-it', 'cd-glute', 'cd-breath'],
+  long:     ['cd-walk', 'cd-calf', 'cd-quad', 'cd-ham', 'cd-hip', 'cd-it', 'cd-glute', 'cd-pigeon', 'cd-back', 'cd-breath'],
+  recovery: ['cd-walk', 'cd-calf', 'cd-quad', 'cd-ham', 'cd-glute', 'cd-breath'],
+  race:     ['cd-walk', 'cd-calf', 'cd-quad', 'cd-ham', 'cd-hip', 'cd-it', 'cd-glute', 'cd-pigeon', 'cd-back', 'cd-breath'],
+  rest:     ['cd-walk', 'cd-calf', 'cd-quad', 'cd-back', 'cd-breath'],
+};
+
 // Long run miles indexed from the end of the plan.
 // Index 0  = taper week (1 week before race)
 // Index 1  = 2 weeks before race, etc.

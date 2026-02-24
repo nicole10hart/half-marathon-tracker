@@ -3,7 +3,7 @@ import { dStr, fmtPace, esc } from './utils.js';
 import { getCurrentWeek, getPlanTotalWeeks } from './plan-generator.js';
 import { renderPlanHTML, setupDragListeners } from './render-plan.js';
 import { renderStatsHTML } from './render-stats.js';
-import { WARMUP_EXERCISES } from './constants.js';
+import { WARMUP_EXERCISES, COOLDOWN_EXERCISES, COOLDOWN_ROUTINES } from './constants.js';
 // render-setup imported lazily to avoid circular dependency at module init time
 // (render-setup.js calls renderApp via dynamic import)
 
@@ -179,6 +179,123 @@ export function closeWarmupGuide() {
   document.getElementById('warmup-guide')?.remove();
 }
 
+// ---- Cool-Down ----
+
+const CD_DUR_MINS = {
+  'cd-walk':4, 'cd-calf':1, 'cd-quad':1, 'cd-ham':1,
+  'cd-hip':1, 'cd-it':1, 'cd-glute':1,
+  'cd-pigeon':1.5, 'cd-back':1.5, 'cd-breath':1,
+};
+
+function renderCooldownHTML(runType) {
+  const ids     = COOLDOWN_ROUTINES[runType] || COOLDOWN_ROUTINES.rest;
+  const exMap   = Object.fromEntries(COOLDOWN_EXERCISES.map(e => [e.id, e]));
+  const exercises = ids.map(id => exMap[id]).filter(Boolean);
+  const totalMins = Math.round(ids.reduce((s, id) => s + (CD_DUR_MINS[id] || 1), 0));
+  const today   = dStr(new Date());
+  const isDone  = _cooldownDoneDate === today;
+
+  const pills = exercises.map((e, i) =>
+    `<span class="warmup-pill" onclick="openCooldownGuide('${runType}',${i})">${e.name}</span>`
+  ).join('');
+
+  const btn = isDone
+    ? `<button class="btn btn-ghost" style="width:100%" onclick="openCooldownGuide('${runType}')">↺ Restart Cool-Down</button>`
+    : `<button class="btn btn-blue" style="width:100%" onclick="openCooldownGuide('${runType}')">Start Guided Cool-Down →</button>`;
+
+  return `
+    <div class="stats-card cooldown-card${isDone ? ' cooldown-done' : ''}">
+      <div class="warmup-header">
+        <span class="warmup-title">Post-Run Cool-Down</span>
+        ${isDone
+          ? `<span class="warmup-done-badge">✓ Done</span>`
+          : `<span class="cooldown-time">~${totalMins} min</span>`}
+      </div>
+      <div class="warmup-meta">${exercises.length} exercises</div>
+      <div class="warmup-pills">${pills}</div>
+      ${btn}
+    </div>`;
+}
+
+let _cooldownExs      = [];
+let _cooldownIdx      = 0;
+let _cooldownRunType  = 'easy';
+let _cooldownDoneDate = null;
+
+export function openCooldownGuide(runType, startIdx = 0) {
+  const ids   = COOLDOWN_ROUTINES[runType] || COOLDOWN_ROUTINES.rest;
+  const exMap = Object.fromEntries(COOLDOWN_EXERCISES.map(e => [e.id, e]));
+  _cooldownExs    = ids.map(id => exMap[id]).filter(Boolean);
+  _cooldownIdx    = Math.max(0, Math.min(_cooldownExs.length - 1, startIdx));
+  _cooldownRunType = runType;
+  _renderCooldownStep();
+}
+
+function _renderCooldownStep() {
+  const ex     = _cooldownExs[_cooldownIdx];
+  const total  = _cooldownExs.length;
+  const isLast = _cooldownIdx === total - 1;
+  const typeColor = '#3b82f6';
+
+  const pills = _cooldownExs.map((e, i) => {
+    const cls   = i < _cooldownIdx ? 'wg-pill done' : i === _cooldownIdx ? 'wg-pill current' : 'wg-pill';
+    const label = i < _cooldownIdx ? `✓ ${e.name}` : e.name;
+    return `<span class="${cls}" onclick="cooldownJump(${i})">${label}</span>`;
+  }).join('');
+
+  let el = document.getElementById('cooldown-guide');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'cooldown-guide';
+    document.body.appendChild(el);
+  }
+  el.style.setProperty('--wg-color', typeColor);
+
+  const pct = Math.round((_cooldownIdx + 1) / total * 100);
+
+  el.innerHTML = `
+    <div class="wg-progress-bar"><div class="wg-progress-fill" style="width:${pct}%"></div></div>
+    <div class="wg-topbar">
+      <span class="wg-counter">${_cooldownIdx + 1} of ${total}</span>
+    </div>
+    <div class="wg-card">
+      <div class="wg-step-num">${_cooldownIdx + 1}</div>
+      <div class="wg-name">${ex.name}</div>
+      <div class="wg-dur-pill">${ex.dur}</div>
+      <div class="wg-desc">${ex.desc}</div>
+    </div>
+    <div class="wg-actions">
+      ${_cooldownIdx > 0
+        ? `<button class="btn btn-ghost" onclick="cooldownStep(-1)">← Prev</button>`
+        : '<span></span>'}
+      ${isLast
+        ? `<button class="btn btn-success" onclick="finishCooldownGuide()">Done ✓</button>`
+        : `<button class="btn btn-blue" onclick="cooldownStep(1)">Next →</button>`}
+    </div>
+    <div class="wg-pills">${pills}</div>
+  `;
+}
+
+export function cooldownStep(dir) {
+  _cooldownIdx = Math.max(0, Math.min(_cooldownExs.length - 1, _cooldownIdx + dir));
+  _renderCooldownStep();
+}
+
+export function cooldownJump(idx) {
+  _cooldownIdx = Math.max(0, Math.min(_cooldownExs.length - 1, idx));
+  _renderCooldownStep();
+}
+
+export function finishCooldownGuide() {
+  _cooldownDoneDate = dStr(new Date());
+  document.getElementById('cooldown-guide')?.remove();
+  renderMainContent();
+}
+
+export function closeCooldownGuide() {
+  document.getElementById('cooldown-guide')?.remove();
+}
+
 function renderInjuriesHTML() {
   const all    = state.injuries || [];
   const active = all.filter(i => !i.resolved);
@@ -266,9 +383,35 @@ function renderTodayHTML() {
         <button class="btn btn-ghost btn-sm" style="margin-top:12px" onclick="openDayCellPicker('${today}')">+ Add Activity</button>
       </div>
 
-      ${todayRunType ? renderWarmupHTML(todayRunType) : ''}
+      ${state.profile?.planType === 'punishment'
+        ? `<div class="stats-card punishment-block">
+             <div class="pb-icon">X</div>
+             <div class="pb-body">
+               <div class="pb-title">Pre-Run Warm-Up</div>
+               <div class="pb-taunt">Warm-ups are for the weak. Stop stalling and start running.</div>
+             </div>
+           </div>`
+        : todayRunType ? renderWarmupHTML(todayRunType) : ''}
 
-      ${renderInjuriesHTML()}
+      ${state.profile?.planType === 'punishment'
+        ? `<div class="stats-card punishment-block">
+             <div class="pb-icon">X</div>
+             <div class="pb-body">
+               <div class="pb-title">Post-Run Cool-Down</div>
+               <div class="pb-taunt">Cool-downs are for the weak. Walk it off on your own time.</div>
+             </div>
+           </div>`
+        : todayRunType ? renderCooldownHTML(todayRunType) : ''}
+
+      ${state.profile?.planType === 'punishment'
+        ? `<div class="stats-card punishment-block">
+             <div class="pb-icon">X</div>
+             <div class="pb-body">
+               <div class="pb-title">Injuries</div>
+               <div class="pb-taunt">Injuries are for the weak. Pain is just weakness leaving the body. Run through it.</div>
+             </div>
+           </div>`
+        : renderInjuriesHTML()}
 
       <div class="stats-card">
         <div class="sc-title" style="margin-bottom:${ctToday.length ? '10px' : '0'}">Cross Training Today</div>
