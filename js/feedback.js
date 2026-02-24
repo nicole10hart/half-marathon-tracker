@@ -16,6 +16,23 @@ export const SKIP_MSGS = [
   'Missed it. Stay focused on race day.',
 ];
 
+export const PUNISHMENT_COMPLETE_MSGS = [
+  'That was the easy part. Tomorrow will be worse.',
+  'Done. Don\'t expect a medal for the bare minimum.',
+  'You finished. The bar is on the floor, but fine.',
+  'Somehow you survived. Don\'t get comfortable.',
+  'Logged. Your suffering has been acknowledged.',
+  'Adequate. The pace gets worse next week.',
+];
+export const PUNISHMENT_SKIP_MSGS = [
+  'Skipped. Pathetic. Your legs hate you for this.',
+  'Did you even try? Absolutely inexcusable.',
+  'Skipped. This is exactly why you won\'t PR.',
+  'Really? REALLY? Get it together.',
+  'Skipped. Your 5K time weeps.',
+  'Wow. Truly unimpressive. See you tomorrow.',
+];
+
 export function randMsg(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
 export function showToast(msg, type = 'ok') {

@@ -236,6 +236,58 @@ export function generatePlan(profile) {
   return runs.sort((a, b) => a.date.localeCompare(b.date));
 }
 
+// Shared helper: compute refPace from profile race times
+function _punishmentRefPace(profile) {
+  const fiveKSecs = parseTimeSecs(profile.fiveKTime);
+  const tenKSecs  = parseTimeSecs(profile.tenKTime);
+  if (fiveKSecs && tenKSecs) {
+    const p5  = fiveKSecs / 3.1;
+    const p5e = (tenKSecs * Math.pow(3.1/6.2, 1.06)) / 3.1;
+    return p5 * 0.45 + p5e * 0.55;
+  } else if (fiveKSecs) {
+    return fiveKSecs / 3.1;
+  } else if (tenKSecs) {
+    return (tenKSecs * Math.pow(3.1/6.2, 1.06)) / 3.1;
+  }
+  return 9 * 60;
+}
+
+const PUNISHMENT_TYPE_MULT = { tempo: 0.93, race: 0.90 };
+
+// Compute a single punishment pace for a given run type and wFE value.
+// Used when adding new runs manually in punishment mode.
+export function calcPunishmentPace(type, wFE) {
+  const profile  = state.profile;
+  const refPace  = _punishmentRefPace(profile);
+  const totalWeeks = profile.totalWeeks || calcTotalWeeks(profile.startDate, profile.raceDate);
+  const maxWFE   = totalWeeks - 1;
+  const t        = maxWFE > 0 ? (maxWFE - wFE) / maxWFE : 1;
+  const base     = refPace * (1.0 - t * 0.18);
+  const mult     = PUNISHMENT_TYPE_MULT[type] ?? 1.0;
+  return Math.round(base * mult);
+}
+
+// Punishment plan: same schedule as generatePlan but all paces start at refPace
+// (no recovery offsets) and ramp up 18% faster by race day.
+// Week 1 = refPace (brutal — 5K pace for every run, no easy days)
+// Race day = refPace * 0.82 (genuinely insane)
+export function generatePunishmentPlan(profile) {
+  const plan    = generatePlan(profile);
+  const refPace = _punishmentRefPace(profile);
+  const totalWeeks = profile.totalWeeks || calcTotalWeeks(profile.startDate, profile.raceDate);
+  const maxWFE  = totalWeeks - 1;
+
+  plan.forEach(r => {
+    // t = 0 at week 1, t = 1 at race week — pace drops from 100% to 82% of refPace
+    const t    = maxWFE > 0 ? (maxWFE - r.wFE) / maxWFE : 1;
+    const base = refPace * (1.0 - t * 0.18);
+    const mult = PUNISHMENT_TYPE_MULT[r.type] ?? 1.0;
+    r.estimatedPace = Math.round(base * mult);
+  });
+
+  return plan;
+}
+
 // Project race finish time from actual training paces.
 // Requires ≥5 completed runs with actualPace. Returns projected finish seconds, or null.
 export function getTrainingProjection() {

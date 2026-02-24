@@ -1,8 +1,8 @@
 import { state, saveState } from './state.js';
 import { parseTimeSecs, parseDate, uid, dStr } from './utils.js';
 import { TYPE_LABELS } from './constants.js';
-import { COMPLETE_MSGS, SKIP_MSGS, randMsg, showToast, daysSince, isFuture } from './feedback.js';
-import { calcPaces, getPlanTotalWeeks, recalcFuturePaces } from './plan-generator.js';
+import { COMPLETE_MSGS, SKIP_MSGS, PUNISHMENT_COMPLETE_MSGS, PUNISHMENT_SKIP_MSGS, randMsg, showToast, daysSince, isFuture } from './feedback.js';
+import { calcPaces, calcPunishmentPace, getPlanTotalWeeks, recalcFuturePaces } from './plan-generator.js';
 import { renderMainContent } from './render-app.js';
 import { closeModal, openDayCellPicker } from './render-modal.js';
 
@@ -80,9 +80,10 @@ export function handleComplete(id, confirmed) {
   r.actualDistance = (actDist !== r.distance) ? actDist : null;
   r.actualPace     = (actPace && actPace !== r.estimatedPace) ? actPace : null;
 
-  recalcFuturePaces();
+  const isPunishment = state.profile?.planType === 'punishment';
+  if (!isPunishment) recalcFuturePaces();
   saveState(); closeModal(); renderMainContent();
-  showToast(randMsg(COMPLETE_MSGS), 'ok');
+  showToast(randMsg(isPunishment ? PUNISHMENT_COMPLETE_MSGS : COMPLETE_MSGS), 'ok');
 }
 
 export function handleUncomplete(id) {
@@ -138,7 +139,7 @@ export function handleSkip(id) {
   r.skipped = true; r.completed = false;
   r.actualDistance = null; r.actualPace = null;
   saveState(); closeModal(); renderMainContent();
-  showToast(randMsg(SKIP_MSGS), 'skip');
+  showToast(randMsg(state.profile?.planType === 'punishment' ? PUNISHMENT_SKIP_MSGS : SKIP_MSGS), 'skip');
 }
 
 export function handleUnskip(id) {
@@ -243,10 +244,17 @@ export function handleAddRun(dateStr) {
   const week    = Math.max(1, Math.round((targSun - startSun) / (7 * 86400000)) + 1);
   const wFE     = Math.max(0, getPlanTotalWeeks() - week);
 
-  const paces = calcPaces(
-    parseTimeSecs(state.profile?.fiveKTime),
-    parseTimeSecs(state.profile?.tenKTime)
-  );
+  const isPunishment = state.profile?.planType === 'punishment';
+  let estimatedPace;
+  if (isPunishment) {
+    estimatedPace = calcPunishmentPace(type, wFE);
+  } else {
+    const paces = calcPaces(
+      parseTimeSecs(state.profile?.fiveKTime),
+      parseTimeSecs(state.profile?.tenKTime)
+    );
+    estimatedPace = paces[type];
+  }
 
   const newRun = {
     id:             uid(),
@@ -254,7 +262,7 @@ export function handleAddRun(dateStr) {
     type,
     label:          TYPE_LABELS[type],
     distance:       Math.round(distance * 10) / 10,
-    estimatedPace:  paces[type],
+    estimatedPace,
     week,
     wFE,
     notes,

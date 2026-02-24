@@ -3,7 +3,7 @@ import { state, saveState } from './state.js';
 import { parseDate, esc } from './utils.js';
 import {
   calcTotalWeeks, calcStartFromRace, raceHint,
-  weeksHint, generatePlan,
+  weeksHint, generatePlan, generatePunishmentPlan,
 } from './plan-generator.js';
 // renderApp imported lazily to avoid circular dependency at module init time
 // (render-app.js → render-setup.js → render-app.js)
@@ -47,6 +47,24 @@ export function renderSetupWizard(prefill) {
             <div class="form-group fg-full">
               <label for="s-name">Your Name</label>
               <input id="s-name" type="text" placeholder="e.g. Alex" value="${esc(p.name||'')}" required autocomplete="given-name">
+            </div>
+
+            <div class="form-group fg-full">
+              <label>Training Mode</label>
+              <div class="plan-type-cards">
+                <button type="button" class="ptc ${(p.planType||'training')==='training'?'ptc-active':''}" data-type="training" onclick="selectPlanType('training')">
+                  <div class="ptc-name">Training</div>
+                  <div class="ptc-desc">Progressive plan designed to get you across the finish line</div>
+                </button>
+                <button type="button" class="ptc ptc-danger ${(p.planType||'training')==='punishment'?'ptc-active':''}" data-type="punishment" onclick="selectPlanType('punishment')">
+                  <div class="ptc-name">Punishment</div>
+                  <div class="ptc-desc">All paces start at race intensity and accelerate from there</div>
+                </button>
+              </div>
+              <input type="hidden" id="s-plantype" value="${p.planType||'training'}">
+              <div id="punishment-disclaimer" class="punishment-disclaimer"${(p.planType||'training')!=='punishment'?' style="display:none"':''}>
+                This feature was made for the developer's boyfriend, use at your own risk. Warm-up and injury tracking are disabled. Paces start at your 5K pace and get faster every week.
+              </div>
             </div>
 
             <div class="form-group">
@@ -154,8 +172,9 @@ export function handleSetup(e) {
     if (!confirm('No race times entered — training paces will be based on a 9:00/mile default. Continue?')) return;
   }
 
-  state.profile = { name, fiveKTime, tenKTime, daysPerWeek, longRunDay, startDate, raceDate, totalWeeks };
-  state.plan = generatePlan(state.profile);
+  const planType = document.getElementById('s-plantype')?.value || 'training';
+  state.profile = { name, fiveKTime, tenKTime, daysPerWeek, longRunDay, startDate, raceDate, totalWeeks, planType };
+  state.plan = planType === 'punishment' ? generatePunishmentPlan(state.profile) : generatePlan(state.profile);
   state.view = 'plan';
   saveState();
   document.getElementById('setup-overlay')?.remove();
@@ -197,6 +216,16 @@ export function onRaceDateChange() {
   } else if (startEl?.value && wkHint) {
     wkHint.textContent = weeksHint(startEl.value, raceVal);
   }
+}
+
+export function selectPlanType(type) {
+  const hidden = document.getElementById('s-plantype');
+  if (hidden) hidden.value = type;
+  document.querySelectorAll('.ptc').forEach(el => {
+    el.classList.toggle('ptc-active', el.dataset.type === type);
+  });
+  const disc = document.getElementById('punishment-disclaimer');
+  if (disc) disc.style.display = type === 'punishment' ? 'block' : 'none';
 }
 
 export function onStartDateChange() {

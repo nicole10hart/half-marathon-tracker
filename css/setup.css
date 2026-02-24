@@ -125,3 +125,57 @@ input::placeholder, textarea::placeholder { color: var(--t3); }
   border-radius: 4px; padding: 1px 5px;
 }
 .strava-athlete { font-size: 0.82rem; color: var(--t2); margin-bottom: 10px; }
+
+/* ============================================================
+   PLAN TYPE SELECTOR
+============================================================ */
+.plan-type-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 2px;
+}
+.ptc {
+  padding: 14px 16px;
+  border-radius: var(--radius-s);
+  border: 2px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.18s, background 0.18s;
+  color: var(--t1);
+  font-family: inherit;
+}
+.ptc:hover { border-color: rgba(255,255,255,0.18); background: rgba(255,255,255,0.06); }
+.ptc.ptc-active {
+  border-color: var(--orange);
+  background: rgba(249,115,22,0.08);
+}
+.ptc-danger:hover { border-color: rgba(239,68,68,0.4); background: rgba(239,68,68,0.06); }
+.ptc-danger.ptc-active {
+  border-color: var(--red);
+  background: rgba(239,68,68,0.1);
+}
+.ptc-name {
+  font-size: 0.88rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  margin-bottom: 4px;
+}
+.ptc-desc {
+  font-size: 0.72rem;
+  color: var(--t3);
+  line-height: 1.45;
+}
+.ptc-active .ptc-desc { color: var(--t2); }
+
+.punishment-disclaimer {
+  margin-top: 10px;
+  padding: 10px 14px;
+  background: rgba(239,68,68,0.08);
+  border: 1px solid rgba(239,68,68,0.3);
+  border-radius: var(--radius-s);
+  font-size: 0.78rem;
+  color: #fca5a5;
+  line-height: 1.5;
+}
