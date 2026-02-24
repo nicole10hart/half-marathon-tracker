@@ -13,6 +13,7 @@ import { stravaExchangeCode, saveStravaSettings, stravaDisconnect,
          linkStravaActivity, confirmStravaLink, declineStravaLink,
          stravaBulkSync, closeBulkSyncModal,
          linkFromBulk, linkFromBulkSelect,
+         quickLinkFromBulk, quickLinkFromBulkSelect, acceptAllBulk,
          rejectBulkActivity, restoreBulkActivity, addNewFromBulk,
          linkCTFromBulk, rejectBulkCT,
          openStravaCTPicker, confirmStravaCTLink } from './strava.js';
@@ -29,7 +30,8 @@ Object.assign(window, {
   onDragStart, onDragOver, onDragLeave, onDrop, stravaUnlink,
   saveStravaSettings, stravaDisconnect, linkStravaActivity, confirmStravaLink, declineStravaLink,
   stravaBulkSync, closeBulkSyncModal,
-  linkFromBulk, linkFromBulkSelect, rejectBulkActivity, restoreBulkActivity, addNewFromBulk,
+  linkFromBulk, linkFromBulkSelect, quickLinkFromBulk, quickLinkFromBulkSelect, acceptAllBulk,
+  rejectBulkActivity, restoreBulkActivity, addNewFromBulk,
   linkCTFromBulk, rejectBulkCT, openStravaCTPicker, confirmStravaCTLink,
   filterRunLog,
 });

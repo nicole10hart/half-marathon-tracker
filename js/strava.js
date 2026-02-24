@@ -350,11 +350,15 @@ function buildBulkModalBody() {
       let linkBtns = '';
       if (planRuns.length === 1) {
         const r = planRuns[0];
-        linkBtns = `<button class="btn btn-success btn-sm" onclick="linkFromBulk('${r.id}','${a.id}',${a.distance},${a.moving_time},${a.average_heartrate||0},${a.max_heartrate||0})">Link</button>`;
+        const args = `'${r.id}','${a.id}',${a.distance},${a.moving_time},${a.average_heartrate||0},${a.max_heartrate||0}`;
+        linkBtns = `<button class="btn btn-success btn-sm" onclick="quickLinkFromBulk(${args})">Link</button>
+          <button class="btn btn-ghost btn-sm" onclick="linkFromBulk(${args})">Review</button>`;
       } else if (planRuns.length > 1) {
         const opts = planRuns.map(r => `<option value="${r.id}">${r.label} (${r.distance} mi)</option>`).join('');
+        const args = `'${a.id}',${a.distance},${a.moving_time},${a.average_heartrate||0},${a.max_heartrate||0}`;
         linkBtns = `<select id="bulk-sel-${a.id}" class="bulk-run-select">${opts}</select>
-          <button class="btn btn-success btn-sm" onclick="linkFromBulkSelect('${a.id}',${a.distance},${a.moving_time},${a.average_heartrate||0},${a.max_heartrate||0})">Link</button>`;
+          <button class="btn btn-success btn-sm" onclick="quickLinkFromBulkSelect(${args})">Link</button>
+          <button class="btn btn-ghost btn-sm" onclick="linkFromBulkSelect(${args})">Review</button>`;
       }
 
       return `
@@ -466,8 +470,9 @@ function showStravaBulkModal(startDate, endDate) {
       <div class="bulk-body" id="bulk-sync-body">
         ${buildBulkModalBody()}
       </div>
-      <div style="margin-top:14px">
+      <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
         <button class="btn btn-ghost" onclick="closeBulkSyncModal()">Done</button>
+        <button class="btn btn-success" style="margin-left:auto" onclick="acceptAllBulk()">Accept All</button>
       </div>
     </div>`;
   document.body.appendChild(overlay);
@@ -538,6 +543,87 @@ export function linkFromBulkSelect(activityId, distanceM, movingTimeSecs, avgHR,
   const sel = document.getElementById(`bulk-sel-${activityId}`);
   if (!sel?.value) return;
   linkFromBulk(sel.value, activityId, distanceM, movingTimeSecs, avgHR, maxHR);
+}
+
+export function quickLinkFromBulk(planRunId, activityId, distanceM, movingTimeSecs, avgHR, maxHR) {
+  const run = state.plan.find(r => r.id === planRunId);
+  if (!run) return;
+  const distMi = Math.round(distanceM / 1609.34 * 100) / 100;
+  const pace   = distanceM > 0 ? Math.round(movingTimeSecs / (distanceM / 1609.34)) : run.estimatedPace;
+  run.stravaActivityId = String(activityId);
+  run.stravaVerified   = true;
+  run.actualDistance   = (distMi !== run.distance) ? distMi : null;
+  run.actualPace       = (pace !== run.estimatedPace) ? pace : null;
+  run.avgHR            = avgHR > 0 ? Math.round(avgHR) : null;
+  run.maxHR            = maxHR > 0 ? Math.round(maxHR) : null;
+  run.completed        = true;
+  run.skipped          = false;
+  saveState();
+  _bulkActivities = _bulkActivities.filter(a => String(a.id) !== String(activityId));
+  const body = document.getElementById('bulk-sync-body');
+  if (body) body.innerHTML = buildBulkModalBody();
+  showToast(`${run.label} linked`, 'ok');
+  if (run.avgHR) fetchAndStoreHRStream(run, activityId);
+}
+
+export function quickLinkFromBulkSelect(activityId, distanceM, movingTimeSecs, avgHR, maxHR) {
+  const sel = document.getElementById(`bulk-sel-${activityId}`);
+  if (!sel?.value) return;
+  quickLinkFromBulk(sel.value, activityId, distanceM, movingTimeSecs, avgHR, maxHR);
+}
+
+export function acceptAllBulk() {
+  const rejectedIds = new Set((state.strava?.rejectedActivities || []).map(r => String(r.id)));
+  const activeActs  = _bulkActivities.filter(a => !rejectedIds.has(String(a.id)));
+  const linkedIds   = new Set();
+  let linked = 0;
+
+  for (const a of activeActs) {
+    const date     = a.start_date_local.substring(0, 10);
+    const planRuns = state.plan.filter(r => r.date === date && !r.stravaVerified);
+    if (planRuns.length !== 1) continue; // skip ambiguous / no-match dates
+    const run    = planRuns[0];
+    const distMi = Math.round(a.distance / 1609.34 * 100) / 100;
+    const pace   = a.distance > 0 ? Math.round(a.moving_time / (a.distance / 1609.34)) : run.estimatedPace;
+    run.stravaActivityId = String(a.id);
+    run.stravaVerified   = true;
+    run.actualDistance   = (distMi !== run.distance) ? distMi : null;
+    run.actualPace       = (pace !== run.estimatedPace) ? pace : null;
+    run.avgHR            = (a.average_heartrate || 0) > 0 ? Math.round(a.average_heartrate) : null;
+    run.maxHR            = (a.max_heartrate    || 0) > 0 ? Math.round(a.max_heartrate)     : null;
+    run.completed        = true;
+    run.skipped          = false;
+    linkedIds.add(String(a.id));
+    linked++;
+    if (run.avgHR) fetchAndStoreHRStream(run, a.id);
+  }
+
+  // Auto-log all CT activities
+  let ctLinked = 0;
+  for (const a of _bulkCTActivities) {
+    const ctType  = stravaActivityCTType(a);
+    const dateStr = a.start_date_local.substring(0, 10);
+    if (!state.crossTraining) state.crossTraining = [];
+    if (!state.crossTraining.some(c => c.stravaActivityId === String(a.id))) {
+      state.crossTraining.push({
+        id: uid(), date: dateStr, type: ctType,
+        duration: Math.round(a.moving_time / 60),
+        notes: a.name, stravaActivityId: String(a.id),
+      });
+      ctLinked++;
+    }
+  }
+
+  if (!linked && !ctLinked) {
+    showToast('Nothing to auto-link — use Link buttons for ambiguous dates', 'warn');
+    return;
+  }
+  _bulkActivities   = _bulkActivities.filter(a => !linkedIds.has(String(a.id)));
+  _bulkCTActivities = [];
+  saveState();
+  const body = document.getElementById('bulk-sync-body');
+  if (body) body.innerHTML = buildBulkModalBody();
+  showToast(`Linked ${linked} run${linked !== 1 ? 's' : ''}${ctLinked ? ` + ${ctLinked} CT` : ''}`, 'ok');
 }
 
 export function addNewFromBulk(dateStr, activityId, distanceM, movingTimeSecs, avgHR, maxHR) {
