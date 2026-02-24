@@ -59,8 +59,8 @@ function renderWarmupHTML(runType) {
   const today = dStr(new Date());
   const isDone = _warmupDoneDate === today;
 
-  const pills = exercises.map(e =>
-    `<span class="warmup-pill">${e.name}</span>`
+  const pills = exercises.map((e, i) =>
+    `<span class="warmup-pill" onclick="openWarmupGuide('${runType}',${i})">${e.name}</span>`
   ).join('');
 
   const btn = isDone
@@ -92,11 +92,11 @@ const WARMUP_TYPE_COLORS = {
   recovery: '#a78bfa', race: '#f59e0b', rest: '#64748b',
 };
 
-export function openWarmupGuide(runType) {
+export function openWarmupGuide(runType, startIdx = 0) {
   const ids  = buildWarmupIds(runType);
   const exMap = Object.fromEntries(WARMUP_EXERCISES.map(e => [e.id, e]));
   _warmupExs    = ids.map(id => exMap[id]).filter(Boolean);
-  _warmupIdx    = 0;
+  _warmupIdx    = Math.max(0, Math.min(_warmupExs.length - 1, startIdx));
   _warmupRunType = runType;
   _renderWarmupStep();
 }
