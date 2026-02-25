@@ -348,10 +348,18 @@ textarea {
   transition: width 0.35s cubic-bezier(0.4,0,0.2,1);
 }
 .wg-topbar {
-  display: flex; align-items: center; justify-content: center;
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
   padding: 14px 22px 10px;
   flex-shrink: 0;
 }
+.wg-counter { grid-column: 2; }
+.wg-close {
+  grid-column: 3; justify-self: end;
+  background: none; border: none; cursor: pointer;
+  color: var(--t3); font-size: 1.2rem; line-height: 1; padding: 4px 2px;
+  opacity: 0.6; transition: opacity 0.15s;
+}
+.wg-close:hover { opacity: 1; color: var(--t1); }
 .wg-counter {
   font-size: 0.8rem; font-weight: 800; letter-spacing: 0.08em;
   color: var(--wg-color); text-transform: uppercase; opacity: 0.85;

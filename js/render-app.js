@@ -138,7 +138,9 @@ function _renderWarmupStep() {
   el.innerHTML = `
     <div class="wg-progress-bar"><div class="wg-progress-fill" style="width:${pct}%"></div></div>
     <div class="wg-topbar">
+      <span></span>
       <span class="wg-counter">${_warmupIdx + 1} of ${total}</span>
+      <button class="wg-close" onclick="closeWarmupGuide()" aria-label="Exit">✕</button>
     </div>
     <div class="wg-card">
       <div class="wg-step-num">${_warmupIdx + 1}</div>
@@ -256,7 +258,9 @@ function _renderCooldownStep() {
   el.innerHTML = `
     <div class="wg-progress-bar"><div class="wg-progress-fill" style="width:${pct}%"></div></div>
     <div class="wg-topbar">
+      <span></span>
       <span class="wg-counter">${_cooldownIdx + 1} of ${total}</span>
+      <button class="wg-close" onclick="closeCooldownGuide()" aria-label="Exit">✕</button>
     </div>
     <div class="wg-card">
       <div class="wg-step-num">${_cooldownIdx + 1}</div>

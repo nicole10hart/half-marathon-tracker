@@ -155,7 +155,7 @@
 
 .rl-row {
   display: grid;
-  grid-template-columns: 130px auto 1fr 76px 68px 68px 70px 44px;
+  grid-template-columns: 130px auto 1fr 96px 76px 68px 68px 70px 44px;
   align-items: center;
   gap: 12px;
   padding: 13px 4px;
@@ -228,7 +228,7 @@
 /* Stat bubbles */
 .stat-bubbles { display: flex; flex-wrap: wrap; gap: 8px; }
 .stat-bubbles .stat-bubble { flex: 1; min-width: 0; align-self: stretch; }
-.stat-bubbles-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.stat-bubbles-2 { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 8px; flex: 1; }
 .stat-bubble {
   background: rgba(255,255,255,0.04);
   border: 1px solid var(--border);
@@ -253,6 +253,11 @@
 .hr-spark { display: block; width: 100%; }
 .rl-hr-val { font-size: 0.58rem; color: #fc4c02; font-weight: 700; white-space: nowrap; letter-spacing: 0.02em; text-align: center; }
 
+/* Pace sparkline */
+.rl-pace-spark { display: flex; flex-direction: column; justify-content: center; gap: 2px; min-width: 0; }
+.pace-spark { display: block; width: 100%; }
+.rl-pace-spark-val { font-size: 0.58rem; color: #3b82f6; font-weight: 700; white-space: nowrap; letter-spacing: 0.02em; text-align: center; }
+
 /* HR stats grid in Strava card */
 .strava-hr-grid {
   display: grid; grid-template-columns: 1fr 1fr 1fr;
@@ -263,10 +268,10 @@
 .summary-inner {
   display: flex;
   gap: 0;
-  align-items: flex-start;
+  align-items: stretch;
 }
 .summary-col     { min-width: 0; }
-.summary-running { flex: 0 0 auto; }
+.summary-running { flex: 0 0 auto; display: flex; flex-direction: column; }
 .summary-ct      { flex: 1; }
 .summary-divider {
   width: 1px; background: var(--border);
@@ -279,7 +284,11 @@
 
 /* Pace trend card */
 .pace-trend-card { display: flex; flex-direction: column; }
-.pt-chart-fill   { flex: 1; min-height: 80px; }
+.pt-chart-fill   { flex: 1; min-height: 70px; display: flex; flex-direction: column; }
+.pt-stats        { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 14px; }
+.pt-stat         { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px; padding: 10px 8px; text-align: center; }
+.pt-stat-val     { font-size: 0.95rem; font-weight: 700; color: var(--t1); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pt-stat-lbl     { font-size: 0.62rem; color: var(--t3); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 3px; }
 .pt-empty {
   flex: 1; display: flex; flex-direction: column;
   align-items: center; justify-content: center;
@@ -537,7 +546,8 @@
 .fc-rows       { display: flex; flex-direction: column; gap: 10px; }
 .fc-row        { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .fc-label      { font-size: 0.8rem; color: var(--t3); }
-.fc-val        { font-size: 1.5rem; font-weight: 800; color: var(--t1); font-variant-numeric: tabular-nums; }
+.fc-val        { font-size: 1.5rem; font-weight: 800; color: var(--t1); font-variant-numeric: tabular-nums; display: flex; align-items: baseline; gap: 8px; }
+.fc-pace       { font-size: 0.72rem; font-weight: 600; color: var(--t3); white-space: nowrap; }
 .fc-proj       { color: var(--orange); }
 .fc-proj-empty { font-size: 0.78rem; font-weight: 400; color: var(--t3); font-style: italic; }
 .fc-delta      { font-size: 0.9rem; font-weight: 700; padding-top: 6px; border-top: 1px solid var(--border); }

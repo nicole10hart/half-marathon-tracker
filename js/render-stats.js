@@ -163,12 +163,21 @@ function renderRaceForecastCard() {
     raceDateLine = `<div class="fc-race-date">${label} &nbsp;·&nbsp; <span style="color:var(--orange)">${cdStr}</span></div>`;
   }
 
+  const goalPace = goalSecs ? Math.round(goalSecs / 13.1) : null;
+  const projPace = projSecs ? Math.round(projSecs / 13.1) : null;
+
   const goalRow = goalSecs
-    ? `<div class="fc-row"><div class="fc-label">Goal (from race times)</div><div class="fc-val">${fmtSecs(Math.round(goalSecs))}</div></div>`
+    ? `<div class="fc-row">
+        <div class="fc-label">Goal (from race times)</div>
+        <div class="fc-val">${fmtSecs(Math.round(goalSecs))}<span class="fc-pace">${fmtPace(goalPace)}/mi avg</span></div>
+      </div>`
     : '';
 
   const projRow = projSecs
-    ? `<div class="fc-row"><div class="fc-label">Training projection</div><div class="fc-val fc-proj">${fmtSecs(projSecs)}</div></div>`
+    ? `<div class="fc-row">
+        <div class="fc-label">Training projection</div>
+        <div class="fc-val fc-proj">${fmtSecs(projSecs)}<span class="fc-pace">${fmtPace(projPace)}/mi avg</span></div>
+      </div>`
     : goalSecs
     ? `<div class="fc-row"><div class="fc-label">Training projection</div><div class="fc-val fc-proj-empty">Available after 5 completed runs with logged pace</div></div>`
     : '';
@@ -231,9 +240,15 @@ function renderPaceTrendCard() {
   const plotW = W - LPAD - 8;
   const plotH = H - PT - PB;
 
+  // Add padding so dots aren't pinned to chart edges
+  const pad  = Math.max(25, Math.round(rng * 0.4));
+  const minY = minP - pad;
+  const maxY = maxP + pad;
+  const extRng = maxY - minY;
+
   const xi = i => LPAD + (trend.length < 2 ? plotW / 2 : (i / (trend.length - 1)) * plotW);
-  // lower refPace = faster = higher on chart (invert Y)
-  const yi = p => PT + ((p - minP) / rng) * plotH;
+  // lower refPace = faster = higher on chart (invert Y); use padded range
+  const yi = p => PT + ((p - minY) / extRng) * plotH;
 
   const pts  = trend.map((t, i) => `${xi(i).toFixed(1)},${yi(t.refPace).toFixed(1)}`).join(' ');
 
@@ -254,17 +269,42 @@ function renderPaceTrendCard() {
     `<text x="${xi(i).toFixed(1)}" y="${H}" text-anchor="middle" fill="#475569" font-size="7" font-family="system-ui">W${t.week}</text>`
   ).join('');
 
+  const avgP   = Math.round(paces.reduce((s, v) => s + v, 0) / paces.length);
+  // Convert refPace back to readable easy-equivalent pace (refPace + easy offset)
+  const EASY_OFF = 90;
+  const bestPace   = fmtPace(minP + EASY_OFF);
+  const recentPace = fmtPace(last + EASY_OFF);
+  const avgPaceFmt = fmtPace(avgP + EASY_OFF);
+
   return `
     <div class="stats-card pace-trend-card">
       <div class="sc-title">Pace Trend <span class="sc-sub-inline">${trendBadge}</span></div>
       <div class="pt-chart-fill">
-        <svg width="100%" height="100%" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="display:block;overflow:visible">
+        <svg width="100%" height="100%" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="display:block;overflow:visible;flex:1">
           <text x="${LPAD - 4}" y="${(PT + 5).toFixed(1)}" text-anchor="end" fill="#475569" font-size="7.5" font-family="system-ui">${fmtPace(minP)} ↑</text>
           <text x="${LPAD - 4}" y="${(PT + plotH).toFixed(1)}" text-anchor="end" fill="#475569" font-size="7.5" font-family="system-ui">${fmtPace(maxP)} ↓</text>
           <polyline points="${pts}" fill="none" stroke="${lineColor}" stroke-width="2.5" stroke-linejoin="round" opacity="0.85"/>
           ${dots}
           ${labels}
         </svg>
+      </div>
+      <div class="pt-stats">
+        <div class="pt-stat">
+          <div class="pt-stat-val" style="color:var(--green)">${bestPace}</div>
+          <div class="pt-stat-lbl">best week</div>
+        </div>
+        <div class="pt-stat">
+          <div class="pt-stat-val">${avgPaceFmt}</div>
+          <div class="pt-stat-lbl">avg easy pace</div>
+        </div>
+        <div class="pt-stat">
+          <div class="pt-stat-val" style="color:${lineColor}">${recentPace}</div>
+          <div class="pt-stat-lbl">most recent</div>
+        </div>
+        <div class="pt-stat">
+          <div class="pt-stat-val" style="color:var(--t2)">${trend.length}</div>
+          <div class="pt-stat-lbl">weeks tracked</div>
+        </div>
       </div>
     </div>`;
 }
@@ -396,9 +436,10 @@ function hrTimeSeriesSVG(series) {
   const endDate   = parseDate(planDates[planDates.length - 1]);
   const totalDays = Math.max(Math.round((endDate - startDate) / 86400000), 1);
 
-  // Logical viewport — width="100%" with no height lets SVG auto-size proportionally
+  // Taller chart on mobile so it's readable
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 720;
   const LW = 600, PAD = 20;
-  const H = 65, PT = 12, PB = 14;
+  const H = isMobile ? 130 : 65, PT = 12, PB = 14;
   const plotH = H - PT - PB;
 
   const dateToX = dateStr => {
@@ -460,6 +501,44 @@ function hrSparklineSVG(stream, avgHR) {
     ${avgHR ? `<div class="rl-hr-val">${avgHR}</div>` : ''}`;
 }
 
+function paceSparklineSVG(stream, avgPace) {
+  if (!stream?.length) return '';
+  // Filter out nulls (GPS gaps) for min/max, but keep position for rendering
+  const valid = stream.filter(v => v != null);
+  if (!valid.length) return '';
+  const H = 18, VW = 100;
+  // Clamp extreme values (stops/GPS dropouts) to ±2 min of median
+  const sorted = [...valid].sort((a, b) => a - b);
+  const median = sorted[Math.floor(sorted.length / 2)];
+  const clamped = stream.map(v => v == null ? null : Math.min(Math.max(v, median - 120), median + 120));
+  const vals = clamped.filter(v => v != null);
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
+  const range = max - min || 1;
+  // Build point pairs, skipping nulls (GPS gaps become gaps in the line)
+  const segments = [];
+  let current = [];
+  clamped.forEach((v, i) => {
+    const x = clamped.length === 1 ? 50 : (i / (clamped.length - 1)) * VW;
+    if (v == null) {
+      if (current.length) { segments.push(current); current = []; }
+    } else {
+      // Invert Y: faster (lower sec/mi) = higher on chart
+      const y = H - ((max - v) / range) * H;
+      current.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+    }
+  });
+  if (current.length) segments.push(current);
+  const lines = segments
+    .map(pts => `<polyline points="${pts.join(' ')}" fill="none" stroke="#3b82f6" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>`)
+    .join('');
+  return `
+    <svg width="100%" height="${H}" viewBox="0 0 ${VW} ${H}" preserveAspectRatio="none" class="pace-spark">
+      ${lines}
+    </svg>
+    ${avgPace ? `<div class="rl-pace-spark-val">${fmtPace(avgPace)}</div>` : ''}`;
+}
+
 function getInjuriesOnDate(dateStr) {
   return (state.injuries || []).filter(inj => {
     if (inj.startDate > dateStr) return false;            // hadn't started yet
@@ -480,8 +559,9 @@ function buildRunLogRows(plan) {
     const dateStr  = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
     const actualMi = r.actualDistance ?? r.distance;
     const paceVal  = r.actualPace ?? r.estimatedPace;
-    const hrCell      = hrSparklineSVG(r.hrStream, r.avgHR);
-    const stravaBadge = r.stravaVerified ? `<span class="rl-strava">S</span>` : '';
+    const hrCell        = hrSparklineSVG(r.hrStream, r.avgHR);
+    const paceSparkCell = paceSparklineSVG(r.paceStream, r.actualPace ?? r.estimatedPace);
+    const stravaBadge   = r.stravaVerified ? `<span class="rl-strava">S</span>` : '';
 
     const activeInjuries = getInjuriesOnDate(r.date);
     const SEV_ORDER = { Mild: 1, Moderate: 2, Severe: 3 };
@@ -500,6 +580,7 @@ function buildRunLogRows(plan) {
         <div class="rl-date">${dateStr}</div>
         <div class="rl-type ct-${r.type}">${esc(r.label)}</div>
         <div class="rl-spacer"></div>
+        <div class="rl-pace-spark">${paceSparkCell}</div>
         <div class="rl-hr">${hrCell}</div>
         <div class="rl-actual"><span class="rl-dist-val">${actualMi} mi</span></div>
         <div class="rl-planned"><span class="rl-plan-val">${r.distance} mi</span></div>

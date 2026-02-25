@@ -1,7 +1,8 @@
 import { state, saveState } from './state.js';
-import { parseDate, fmtPace, friendlyDate, esc, dStr, uid } from './utils.js';
+import { parseDate, fmtPace, friendlyDate, esc, dStr, uid, parseTimeSecs } from './utils.js';
 import { showToast } from './feedback.js';
-import { recalcFuturePaces } from './plan-generator.js';
+import { recalcFuturePaces, calcPaces, getPlanTotalWeeks } from './plan-generator.js';
+import { TYPE_LABELS } from './constants.js';
 
 // Strava sport_type → CT_TYPES mapping
 const STRAVA_TO_CT = {
@@ -10,7 +11,7 @@ const STRAVA_TO_CT = {
   Yoga: 'yoga',
   WeightTraining: 'weightlifting',
   Workout: 'hiit',          CrossFit: 'crossfit',
-  Hike: 'hiking',           Walk: 'hiking',
+  Hike: 'hiking',           Walk: 'walking',
   Elliptical: 'elliptical',
   RockClimbing: 'climbing',
   Rowing: 'rowing',         VirtualRow: 'rowing',
@@ -582,24 +583,66 @@ export function acceptAllBulk() {
   const linkedIds   = new Set();
   let linked = 0;
 
+  const paces = calcPaces(
+    parseTimeSecs(state.profile?.fiveKTime),
+    parseTimeSecs(state.profile?.tenKTime)
+  );
+  let added = 0;
+
   for (const a of activeActs) {
     const date     = a.start_date_local.substring(0, 10);
     const planRuns = state.plan.filter(r => r.date === date && !r.stravaVerified);
-    if (planRuns.length !== 1) continue; // skip ambiguous / no-match dates
-    const run    = planRuns[0];
-    const distMi = Math.round(a.distance / 1609.34 * 100) / 100;
-    const pace   = a.distance > 0 ? Math.round(a.moving_time / (a.distance / 1609.34)) : run.estimatedPace;
-    run.stravaActivityId = String(a.id);
-    run.stravaVerified   = true;
-    run.actualDistance   = (distMi !== run.distance) ? distMi : null;
-    run.actualPace       = (pace !== run.estimatedPace) ? pace : null;
-    run.avgHR            = (a.average_heartrate || 0) > 0 ? Math.round(a.average_heartrate) : null;
-    run.maxHR            = (a.max_heartrate    || 0) > 0 ? Math.round(a.max_heartrate)     : null;
-    run.completed        = true;
-    run.skipped          = false;
-    linkedIds.add(String(a.id));
-    linked++;
-    if (run.avgHR) fetchAndStoreHRStream(run, a.id);
+    const distMi   = Math.round(a.distance / 1609.34 * 100) / 100;
+    const pace     = a.distance > 0 ? Math.round(a.moving_time / (a.distance / 1609.34)) : 0;
+
+    if (planRuns.length === 1) {
+      // Link to the matching plan run
+      const run = planRuns[0];
+      run.stravaActivityId = String(a.id);
+      run.stravaVerified   = true;
+      run.actualDistance   = (distMi !== run.distance) ? distMi : null;
+      run.actualPace       = (pace && pace !== run.estimatedPace) ? pace : null;
+      run.avgHR            = (a.average_heartrate || 0) > 0 ? Math.round(a.average_heartrate) : null;
+      run.maxHR            = (a.max_heartrate    || 0) > 0 ? Math.round(a.max_heartrate)     : null;
+      run.completed        = true;
+      run.skipped          = false;
+      linkedIds.add(String(a.id));
+      linked++;
+      fetchAndStoreHRStream(run, a.id);
+    } else if (planRuns.length === 0 && distMi > 0) {
+      // No matching plan run — create a new easy run and link it
+      const start    = parseDate(state.profile.startDate);
+      const startSun = new Date(start); startSun.setDate(start.getDate() - start.getDay());
+      const target   = parseDate(date);
+      const targSun  = new Date(target); targSun.setDate(target.getDate() - target.getDay());
+      const week     = Math.max(1, Math.round((targSun - startSun) / (7 * 86400000)) + 1);
+      const wFE      = Math.max(0, getPlanTotalWeeks() - week);
+      const newRun = {
+        id:              uid(),
+        date,
+        type:            'easy',
+        label:           TYPE_LABELS['easy'],
+        distance:        distMi,
+        estimatedPace:   paces.easy,
+        week,
+        wFE,
+        notes:           a.name || '',
+        completed:       true,
+        skipped:         false,
+        stravaVerified:  true,
+        stravaActivityId: String(a.id),
+        actualDistance:  null,
+        actualPace:      pace || null,
+        avgHR:           (a.average_heartrate || 0) > 0 ? Math.round(a.average_heartrate) : null,
+        maxHR:           (a.max_heartrate    || 0) > 0 ? Math.round(a.max_heartrate)     : null,
+        userAdded:       true,
+      };
+      state.plan.push(newRun);
+      linkedIds.add(String(a.id));
+      added++;
+      fetchAndStoreHRStream(newRun, a.id);
+    }
+    // planRuns.length > 1: ambiguous, skip (user must link manually)
   }
 
   // Auto-log all CT activities
@@ -618,7 +661,7 @@ export function acceptAllBulk() {
     }
   }
 
-  if (!linked && !ctLinked) {
+  if (!linked && !added && !ctLinked) {
     showToast('Nothing to auto-link — use Link buttons for ambiguous dates', 'warn');
     return;
   }
@@ -628,7 +671,11 @@ export function acceptAllBulk() {
   saveState();
   const body = document.getElementById('bulk-sync-body');
   if (body) body.innerHTML = buildBulkModalBody();
-  showToast(`Linked ${linked} run${linked !== 1 ? 's' : ''}${ctLinked ? ` + ${ctLinked} CT` : ''}`, 'ok');
+  const parts = [];
+  if (linked) parts.push(`${linked} linked`);
+  if (added)  parts.push(`${added} added`);
+  if (ctLinked) parts.push(`${ctLinked} CT`);
+  showToast(parts.join(' · ') + ' from Strava', 'ok');
 }
 
 export function addNewFromBulk(dateStr, activityId, distanceM, movingTimeSecs, avgHR, maxHR) {
@@ -762,21 +809,34 @@ export function confirmStravaCTLink(dateStr, activityId, movingTime, sportType) 
   showToast(`${ctType} logged from Strava`, 'ok');
 }
 
-async function fetchAndStoreHRStream(run, activityId) {
+export async function fetchAndStoreHRStream(run, activityId) {
   try {
     const ok = await stravaRefreshIfNeeded();
     if (!ok || !state.strava?.accessToken) return;
     const res = await fetch(
-      `https://www.strava.com/api/v3/activities/${activityId}/streams?keys=heartrate&key_by_type=true`,
+      `https://www.strava.com/api/v3/activities/${activityId}/streams?keys=heartrate,velocity_smooth&key_by_type=true`,
       { headers: { Authorization: `Bearer ${state.strava.accessToken}` } }
     );
     if (!res.ok) return;
     const data = await res.json();
-    const stream = data?.heartrate?.data;
-    if (!Array.isArray(stream) || !stream.length) return;
-    // Downsample to ~40 points for storage
-    const step = Math.max(1, Math.floor(stream.length / 40));
-    run.hrStream = stream.filter((_, i) => i % step === 0).slice(0, 40);
+
+    // HR stream
+    const hrRaw = data?.heartrate?.data;
+    if (Array.isArray(hrRaw) && hrRaw.length) {
+      const step = Math.max(1, Math.floor(hrRaw.length / 40));
+      run.hrStream = hrRaw.filter((_, i) => i % step === 0).slice(0, 40);
+    }
+
+    // Pace stream — velocity_smooth is m/s; convert to sec/mi
+    const velRaw = data?.velocity_smooth?.data;
+    if (Array.isArray(velRaw) && velRaw.length) {
+      const step = Math.max(1, Math.floor(velRaw.length / 40));
+      run.paceStream = velRaw
+        .filter((_, i) => i % step === 0)
+        .slice(0, 40)
+        .map(v => v > 0 ? Math.round(1609.34 / v) : null);
+    }
+
     saveState();
   } catch(e) {}
 }

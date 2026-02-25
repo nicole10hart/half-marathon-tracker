@@ -56,6 +56,7 @@ export function runCardHTML(run) {
 }
 
 export function renderPlanMobileHTML() {
+  const today      = dStr(new Date());
   const curWeek    = getCurrentWeek();
   const totalWeeks = getPlanTotalWeeks();
   const stats      = getStats();
@@ -103,7 +104,9 @@ export function renderPlanMobileHTML() {
       const dateLabel = rd.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
       const stCls  = r.completed ? 'mob-st-done' : r.skipped ? 'mob-st-skip' : 'mob-st-todo';
       const stIcon = r.completed ? '✓' : r.skipped ? '—' : '›';
+      const isToday = r.date === today;
       const rowCls = [
+        isToday ? 'today' : '',
         r.completed ? 'done' : r.skipped ? 'skip' : '',
         r.stravaVerified ? 'strava-verified' : '',
         r.stravaDeclined ? 'strava-declined' : '',
@@ -117,7 +120,7 @@ export function renderPlanMobileHTML() {
       const injTag     = injColor ? `<span class="rc-inj mob-inj" style="color:${injColor}">⚠</span>` : '';
       return `
         <div class="mob-run ${rowCls}" onclick="openModal('${r.id}')" style="position:relative">
-          <div class="mob-run-date">${dateLabel}</div>
+          <div class="mob-run-date${isToday ? ' mob-run-date-today' : ''}">${dateLabel}</div>
           <div class="mob-run-body">
             <div class="mob-run-label ct-${r.type}">${esc(r.label)}${stravaTag}</div>
             <div class="mob-run-dist">${distLine} &nbsp;·&nbsp; ${fmtPace(r.actualPace ?? r.estimatedPace)}</div>

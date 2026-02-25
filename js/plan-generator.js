@@ -3,7 +3,7 @@ import { parseTimeSecs, dStr, parseDate, uid } from './utils.js';
 import { state } from './state.js';
 
 // Additive offsets from reference pace (seconds/mile) per run type
-const PACE_OFFSETS = { easy: 90, long: 90, tempo: 18, recovery: 120 };
+const PACE_OFFSETS = { easy: 90, long: 90, tempo: 18, recovery: 120, race: 40 };
 
 // wFE = weeksFromEnd (0 = race week, 1 = last training week, …)
 export function isCutbackWFE(wFE) {
@@ -312,9 +312,11 @@ export function getTrainingProjection() {
 export function getPaceTrend() {
   const byWeek = {};
   state.plan
-    .filter(r => r.completed && r.actualPace && PACE_OFFSETS[r.type] != null)
+    .filter(r => r.completed && (r.actualPace != null || r.stravaVerified))
     .forEach(r => {
-      const ref = r.actualPace - PACE_OFFSETS[r.type];
+      const pace   = r.actualPace ?? r.estimatedPace;
+      const offset = PACE_OFFSETS[r.type] ?? 90;
+      const ref    = pace - offset;
       if (!byWeek[r.week]) byWeek[r.week] = { week: r.week, refs: [] };
       byWeek[r.week].refs.push(ref);
     });

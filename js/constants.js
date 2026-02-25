@@ -14,7 +14,7 @@ export const CT_TYPES = [
   'dance', 'elliptical', 'foam rolling', 'golf', 'hiking', 'hiit',
   'kayaking', 'martial arts', 'pilates', 'rowing', 'skateboarding',
   'skiing', 'soccer', 'spinning', 'stretching', 'surfing', 'swimming',
-  'tennis', 'volleyball', 'weightlifting', 'yoga',
+  'tennis', 'volleyball', 'walking', 'weightlifting', 'yoga',
 ];
 
 export const INJURY_PARTS = [

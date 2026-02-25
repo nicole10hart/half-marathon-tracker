@@ -82,6 +82,13 @@
 .mob-st-skip { background: var(--r-dim); color: var(--red); }
 .mob-st-todo { background: rgba(255,255,255,0.05); color: var(--t3); font-size: 0.55rem; }
 
+/* Today's run row */
+.mob-run.today:not(.done):not(.skip):not(.strava-verified) {
+  background: rgba(249,115,22,0.06);
+  border-left: 3px solid rgba(249,115,22,0.6);
+}
+.mob-run-date-today { color: var(--orange); font-weight: 700; }
+
 .mob-run.done { background: rgba(34,197,94,0.07); border-left: 3px solid var(--green); }
 .mob-run.done .mob-run-body { opacity: 0.8; }
 .mob-run.skip { background: rgba(239,68,68,0.06); border-left: 3px solid var(--red); }

@@ -31,6 +31,7 @@ function clearStravaLink(r) {
   r.avgHR            = null;
   r.maxHR            = null;
   r.hrStream         = null;
+  r.paceStream       = null;
   showToast('Strava link removed — re-verify on the new date', 'warn');
 }
 
@@ -290,6 +291,8 @@ export function handleAddRun(dateStr) {
     newRun.maxHR            = p.maxHR > 0 ? Math.round(p.maxHR) : null;
     newRun.completed        = true;
     state.strava.pendingLink = null;
+    // Fetch HR + pace streams in background, same as other link paths
+    import('./strava.js').then(m => m.fetchAndStoreHRStream(newRun, p.id));
   }
 
   saveState(); closeModal(); renderMainContent();
@@ -304,6 +307,7 @@ export function stravaUnlink(id) {
   r.avgHR            = null;
   r.maxHR            = null;
   r.hrStream         = null;
+  r.paceStream       = null;
   saveState();
   import('./render-modal.js').then(m => { m.closeModal(true); m.openModal(id); });
   renderMainContent();

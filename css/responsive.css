@@ -11,16 +11,25 @@
   #main-content { padding: 12px 12px 48px; }
   .progress-header { flex-direction: column; gap: 14px; align-items: stretch; }
   .ph-kpis { justify-content: space-around; }
-  .rl-row    { grid-template-columns: 110px 1fr 60px 44px; }
-  .rl-pace   { display: none; }
-  .rl-hr     { display: none; }
-  .rl-spacer { display: none; }
-  .rl-planned { display: none; }
+  .rl-row        { grid-template-columns: 110px 1fr 60px 44px; }
+  .rl-pace       { display: none; }
+  .rl-hr         { display: none; }
+  .rl-pace-spark { display: none; }
+  .rl-spacer     { display: none; }
+  .rl-planned    { display: none; }
   /* Totals card: stack running + CT vertically on mobile */
   .summary-inner   { flex-direction: column; }
   .summary-divider { width: auto; height: 1px; margin: 14px 0; align-self: auto; }
-  /* Pace trend: give chart a fixed height when stacked */
-  .pt-chart-fill   { min-height: 120px; }
+  /* Strava stat bubbles: smaller on mobile so they fit in one row */
+  .stat-bubble-s         { padding: 4px 8px; min-width: 44px; }
+  .stat-bubble-s .sb-val { font-size: 0.82rem; }
+  .stat-bubble-s .sb-lbl { font-size: 0.52rem; }
+  /* CT type breakdown: single column list on mobile */
+  .type-breakdown  { grid-template-columns: 1fr; }
+  .tb-item         { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px; }
+  .tb-type         { flex: 1; margin-bottom: 0; }
+  .tb-count        { font-size: 0.9rem; }
+  .tb-mi           { min-width: 52px; text-align: right; margin-top: 0; }
 }
 
 @media (max-width: 540px) {
