@@ -99,7 +99,10 @@ export function renderPlanMobileHTML() {
     // CT-only dates (rest days with cross training)
     const ctOnlyDates = weekDates.filter(d => !runDatesSet.has(d) && ctByDate[d]?.length);
 
-    const runRows = weekRuns.map(r => {
+    // Build date-sorted items: runs (with inline CT) + CT-only rest days
+    const allItems = [];
+
+    weekRuns.forEach(r => {
       const rd        = parseDate(r.date);
       const dateLabel = rd.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
       const stCls  = r.completed ? 'mob-st-done' : r.skipped ? 'mob-st-skip' : 'mob-st-todo';
@@ -118,7 +121,10 @@ export function renderPlanMobileHTML() {
       const stravaTag  = r.stravaVerified ? ` <span class="rc-strava-s">S</span>` : '';
       const injColor   = r.completed ? worstInjuryColor(r.date) : null;
       const injTag     = injColor ? `<span class="rc-inj mob-inj" style="color:${injColor}">⚠</span>` : '';
-      return `
+      const ctInline   = (ctByDate[r.date]||[]).map(ct =>
+        `<div class="ct-item mob-ct-item" onclick="openCTModal(null,'${ct.id}')">${esc(ct.type)}${ct.duration ? ` · ${ct.duration} min` : ''}</div>`
+      ).join('');
+      allItems.push({ date: r.date, html: `
         <div class="mob-run ${rowCls}" onclick="openModal('${r.id}')" style="position:relative">
           <div class="mob-run-date${isToday ? ' mob-run-date-today' : ''}">${dateLabel}</div>
           <div class="mob-run-body">
@@ -127,16 +133,14 @@ export function renderPlanMobileHTML() {
           </div>
           <div class="mob-run-status ${stCls}">${stIcon}</div>
           ${injTag}
-        </div>
-        ${(ctByDate[r.date]||[]).map(ct =>
-          `<div class="ct-item mob-ct-item" onclick="openCTModal(null,'${ct.id}')">${esc(ct.type)}${ct.duration ? ` · ${ct.duration} min` : ''}</div>`
-        ).join('')}`;
-    }).join('');
+        </div>${ctInline}` });
+    });
 
-    const ctOnlyRows = ctOnlyDates.sort().map(d => {
+    // CT-only rest days: interleave in date order
+    ctOnlyDates.forEach(d => {
       const rd = parseDate(d);
       const dateLabel = rd.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' });
-      return ctByDate[d].map(ct =>
+      const html = ctByDate[d].map(ct =>
         `<div class="mob-run" onclick="openCTModal(null,'${ct.id}')">
           <div class="mob-run-date">${dateLabel}</div>
           <div class="mob-run-body">
@@ -146,7 +150,11 @@ export function renderPlanMobileHTML() {
           <div class="mob-run-status mob-st-todo" style="background:#38bdf8;color:#0f172a">+</div>
         </div>`
       ).join('');
-    }).join('');
+      allItems.push({ date: d, html });
+    });
+
+    allItems.sort((a, b) => a.date.localeCompare(b.date));
+    const allRows = allItems.map(i => i.html).join('');
 
     weeksHtml += `
       <div class="mob-week${isCur ? ' cur' : ''}">
@@ -157,8 +165,7 @@ export function renderPlanMobileHTML() {
           </div>
           <div class="mob-wk-mi">${miComp.toFixed(1)} / ${miAll.toFixed(1)} mi</div>
         </div>
-        ${runRows}
-        ${ctOnlyRows}
+        ${allRows}
       </div>`;
   }
 

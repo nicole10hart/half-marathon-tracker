@@ -310,19 +310,21 @@ function renderPaceTrendCard() {
 }
 
 function renderAdherenceCard() {
-  if (!state.plan.length) return '';
+  // Only count plan-generated runs (not bonus runs added via Strava sync or manually)
+  const plannedRuns = state.plan.filter(r => !r.userAdded);
+  if (!plannedRuns.length) return '';
   const curWeek = getCurrentWeek();
-  const stats   = getStats();
 
-  const weekNums = [...new Set(state.plan.map(r => r.week))]
+  const weekNums = [...new Set(plannedRuns.map(r => r.week))]
     .filter(w => w <= curWeek)
     .sort((a, b) => a - b);
   if (!weekNums.length) return '';
 
   const rows = weekNums.map(week => {
-    const weekRuns = state.plan.filter(r => r.week === week);
+    const weekRuns = plannedRuns.filter(r => r.week === week);
     const planned  = weekRuns.reduce((s, r) => s + r.distance, 0);
-    const done     = weekRuns.filter(r => r.completed).reduce((s, r) => s + (r.actualDistance ?? r.distance), 0);
+    // Use planned distance (not actual) so overrunning one day can't inflate the %
+    const done     = weekRuns.filter(r => r.completed).reduce((s, r) => s + r.distance, 0);
     const pct      = planned ? Math.min(100, Math.round((done / planned) * 100)) : 0;
     const barColor = pct >= 80 ? 'var(--green)' : pct >= 50 ? '#f59e0b' : 'var(--red)';
     const isCur    = week === curWeek;
@@ -335,7 +337,11 @@ function renderAdherenceCard() {
       </div>`;
   }).join('');
 
-  const overallPct = stats.total ? Math.round((stats.completed / stats.total) * 100) : 0;
+  const total     = plannedRuns.length;
+  const completed = plannedRuns.filter(r => r.completed).length;
+  const skipped   = plannedRuns.filter(r => r.skipped).length;
+  const upcoming  = plannedRuns.filter(r => !r.completed && !r.skipped).length;
+  const overallPct = total ? Math.round((completed / total) * 100) : 0;
 
   return `
     <div class="stats-card">
@@ -343,9 +349,9 @@ function renderAdherenceCard() {
       <div class="adh-rows">${rows}</div>
       <div class="adh-kpis">
         <div class="adh-kpi"><div class="adh-kpi-val" style="color:var(--orange)">${overallPct}%</div><div class="adh-kpi-lbl">adherence</div></div>
-        <div class="adh-kpi"><div class="adh-kpi-val" style="color:var(--green)">${stats.completed}</div><div class="adh-kpi-lbl">done</div></div>
-        <div class="adh-kpi"><div class="adh-kpi-val" style="color:var(--red)">${stats.skipped}</div><div class="adh-kpi-lbl">skipped</div></div>
-        <div class="adh-kpi"><div class="adh-kpi-val" style="color:var(--t2)">${stats.upcoming}</div><div class="adh-kpi-lbl">remaining</div></div>
+        <div class="adh-kpi"><div class="adh-kpi-val" style="color:var(--green)">${completed}</div><div class="adh-kpi-lbl">done</div></div>
+        <div class="adh-kpi"><div class="adh-kpi-val" style="color:var(--red)">${skipped}</div><div class="adh-kpi-lbl">skipped</div></div>
+        <div class="adh-kpi"><div class="adh-kpi-val" style="color:var(--t2)">${upcoming}</div><div class="adh-kpi-lbl">remaining</div></div>
       </div>
     </div>`;
 }
