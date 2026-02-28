@@ -35,6 +35,8 @@
 @media (max-width: 540px) {
   .nav-tab { padding: 4px 12px; font-size: 0.82rem; }
   .btn-txt { display: none; }
+  .nav-plan-type { display: none; }
+  .nav-share-btn { display: none; }
   .tab-abbr { display: inline; }
   .tab-full  { display: none; }
   /* Today view: 4-col week stats → 2×2 on very narrow */

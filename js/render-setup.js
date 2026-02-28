@@ -175,6 +175,11 @@ export function handleSetup(e) {
   const planType = document.getElementById('s-plantype')?.value || 'training';
   state.profile = { name, fiveKTime, tenKTime, daysPerWeek, longRunDay, startDate, raceDate, totalWeeks, planType };
   state.plan = planType === 'punishment' ? generatePunishmentPlan(state.profile) : generatePlan(state.profile);
+  state.crossTraining = [];
+  state.injuries = [];
+  state.raceResult = null;
+  state.weeklyRecapDismissed = null;
+  state.midCheckInDismissed = false;
   state.view = 'plan';
   saveState();
   document.getElementById('setup-overlay')?.remove();

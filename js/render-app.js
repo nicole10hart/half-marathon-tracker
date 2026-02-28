@@ -713,7 +713,7 @@ export function renderApp() {
   const _planDisplay = { training: 'Training', punishment: 'Punishment' }[_planType] || (_planType.charAt(0).toUpperCase() + _planType.slice(1));
   document.getElementById('nav-right').innerHTML = `
     <span class="nav-plan-type${_planType === 'punishment' ? ' nav-plan-type--punishment' : ''}">${_planDisplay}</span>
-    <button class="btn btn-ghost" onclick="shareReadOnlyUrl()">↑<span class="btn-txt"> Share</span></button>
+    <button class="btn btn-ghost nav-share-btn" onclick="shareReadOnlyUrl()">↑<span class="btn-txt"> Share</span></button>
     <button class="btn btn-ghost" onclick="openEditProfile()">⚙<span class="btn-txt"> Settings</span></button>
     <button class="btn btn-ghost" onclick="resetConfirm()">↺<span class="btn-txt"> Reset</span></button>
   `;
