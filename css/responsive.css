@@ -89,6 +89,19 @@
   .adh-mi  { display: none; }
   /* 3-col KPI grid instead of 4 on very narrow: */
   .adh-kpis { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+
+  /* ---- Weekly Recap: 2-column stats grid on narrow ---- */
+  .recap-stats { grid-template-columns: repeat(2, 1fr); }
+
+  /* ---- Mid-Plan Check-In: stack action buttons ---- */
+  .checkin-actions { grid-template-columns: 1fr; }
+
+  /* ---- Race Day: full-width times grid ---- */
+  .rd-times-grid { max-width: 100%; }
+  .rd-pacing { max-width: 100%; }
+  .rd-log-btn { max-width: 100%; }
+  .rd-result-actions { max-width: 100%; }
+  .rd-banner { font-size: 2.2rem; }
 }
 @media (max-width: 380px) {
   .nav-tab { padding: 4px 8px; font-size: 0.76rem; }

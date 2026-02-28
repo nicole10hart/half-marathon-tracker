@@ -1,17 +1,19 @@
 import { state, loadState } from './state.js';
 import { renderApp, renderMainContent, switchView,
          openWarmupGuide, warmupStep, warmupJump, closeWarmupGuide, finishWarmupGuide,
-         openCooldownGuide, cooldownStep, cooldownJump, closeCooldownGuide, finishCooldownGuide } from './render-app.js';
+         openCooldownGuide, cooldownStep, cooldownJump, closeCooldownGuide, finishCooldownGuide,
+         shareReadOnlyUrl } from './render-app.js';
 import { filterRunLog } from './render-stats.js';
 import { handleSetup, cancelEdit, openEditProfile,
          resetConfirm, onRaceDateChange, onStartDateChange, selectPlanType } from './render-setup.js';
 import { openModal, closeModal, openNewRunModal, updateNewRunTempoBreakdown,
-         openDayCellPicker, openCTModal, openInjuryModal } from './render-modal.js';
+         openDayCellPicker, openCTModal, openInjuryModal, openRaceResultModal } from './render-modal.js';
 import { handleComplete, handleUncomplete, handleUpdateRun, handleSkip, handleUnskip,
          handleMove, handleSaveNotes, handleAddRun, handleDeleteRun, dayCellClick,
          onDragStart, onDragOver, onDragLeave, onDrop, stravaUnlink,
          handleAddCT, handleUpdateCT, handleDeleteCT,
-         handleAddInjury, handleUpdateInjury, handleResolveInjury, handleDeleteInjury } from './handlers.js';
+         handleAddInjury, handleUpdateInjury, handleResolveInjury, handleDeleteInjury,
+         dismissWeeklyRecap, midCheckInAction, handleSaveRaceResult } from './handlers.js';
 import { stravaExchangeCode, saveStravaSettings, stravaDisconnect,
          linkStravaActivity, confirmStravaLink, declineStravaLink,
          stravaBulkSync, closeBulkSyncModal,
@@ -30,6 +32,7 @@ Object.assign(window, {
   openModal, closeModal, openNewRunModal, updateNewRunTempoBreakdown,
   openDayCellPicker, openCTModal, handleAddCT, handleUpdateCT, handleDeleteCT,
   openInjuryModal, handleAddInjury, handleUpdateInjury, handleResolveInjury, handleDeleteInjury,
+  openRaceResultModal, dismissWeeklyRecap, midCheckInAction, handleSaveRaceResult,
   handleComplete, handleUncomplete, handleUpdateRun, handleSkip, handleUnskip,
   handleMove, handleSaveNotes, handleAddRun, handleDeleteRun, dayCellClick,
   onDragStart, onDragOver, onDragLeave, onDrop, stravaUnlink,
@@ -39,15 +42,27 @@ Object.assign(window, {
   rejectBulkActivity, restoreBulkActivity, addNewFromBulk,
   linkCTFromBulk, rejectBulkCT, openStravaCTPicker, confirmStravaCTLink,
   filterRunLog,
+  shareReadOnlyUrl,
 });
 
-// Boot
-loadState();
+// Boot — detect ?share= read-only URL before loading localStorage state
+const _params = new URLSearchParams(window.location.search);
+const _shareParam = _params.get('share');
+if (_shareParam) {
+  try {
+    const _data = JSON.parse(decodeURIComponent(atob(_shareParam)));
+    Object.assign(state, _data, { readOnly: true, view: 'plan', strava: null });
+    window.history.replaceState({}, '', window.location.pathname + window.location.hash);
+  } catch(e) { loadState(); }
+} else {
+  loadState();
+}
+
 (async function init() {
   // Handle Strava OAuth redirect — Strava appends ?code=... after authorization
   const params = new URLSearchParams(window.location.search);
   const code = params.get('code');
-  if (code && state.strava?.clientId && state.strava?.clientSecret) {
+  if (!state.readOnly && code && state.strava?.clientId && state.strava?.clientSecret) {
     await stravaExchangeCode(code);
     window.history.replaceState({}, '', window.location.pathname + window.location.hash);
   }

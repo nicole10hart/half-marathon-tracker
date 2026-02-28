@@ -489,6 +489,39 @@ export function openInjuryModal(injuryId = null, prefillDate = null) {
   document.body.appendChild(overlay);
 }
 
+export function openRaceResultModal(isEdit = false) {
+  closeModal(true);
+  const existing = state.raceResult;
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'run-modal';
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+  overlay.innerHTML = `
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title">${isEdit ? 'Edit' : 'Log'} Race Result</div>
+          <div class="modal-meta">${state.profile?.raceDate || ''}</div>
+        </div>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-section">
+        <span class="modal-section-label">Finish Time <span style="color:var(--t3);font-weight:400">(H:MM:SS or MM:SS)</span></span>
+        <input type="text" id="race-result-time" placeholder="e.g. 1:58:42"
+          value="${existing?.timeSecs ? fmtSecs(existing.timeSecs) : ''}" style="width:100%">
+      </div>
+      <div class="modal-section">
+        <span class="modal-section-label">Notes <span style="color:var(--t3);font-weight:400">(optional)</span></span>
+        <textarea id="race-result-notes" placeholder="How did it feel? Any highlights?">${esc(existing?.notes || '')}</textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-primary full" onclick="handleSaveRaceResult()">Save</button>
+        <button class="btn btn-ghost full" onclick="closeModal()">Cancel</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
 export function closeModal(suppressFlash = false) {
   const m = document.getElementById('run-modal');
   if (m) m.remove();

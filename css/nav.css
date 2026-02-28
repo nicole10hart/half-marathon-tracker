@@ -68,3 +68,56 @@ nav {
   margin-left: auto;
   flex-shrink: 0;
 }
+
+.nav-plan-type {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--t2);
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  padding: 3px 10px;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+.nav-plan-type--punishment {
+  color: var(--red);
+  background: var(--r-dim);
+  border-color: rgba(239,68,68,0.25);
+}
+
+.ro-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--t2);
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 12px;
+  padding: 3px 10px;
+  letter-spacing: 0.03em;
+}
+
+.ro-banner {
+  text-align: center;
+  padding: 14px 20px 16px;
+  background: linear-gradient(180deg, rgba(249,115,22,0.08) 0%, rgba(249,115,22,0.03) 100%);
+  border-bottom: 1px solid rgba(249,115,22,0.18);
+}
+.ro-banner-eyebrow {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--orange);
+  margin-bottom: 4px;
+}
+.ro-banner-name {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--t1);
+  margin-bottom: 3px;
+}
+.ro-banner-meta {
+  font-size: 0.75rem;
+  color: var(--t2);
+}

@@ -357,6 +357,40 @@ export function handleDeleteInjury(id) {
   showToast('Injury removed', 'skip');
 }
 
+export function dismissWeeklyRecap(week) {
+  state.weeklyRecapDismissed = week;
+  saveState(); renderMainContent();
+}
+
+export function midCheckInAction(choice) {
+  if (choice !== 'stay') {
+    const factor = choice === 'push' ? 0.95 : 1.05;
+    const today  = dStr(new Date());
+    state.plan
+      .filter(r => !r.completed && !r.skipped && r.date >= today)
+      .forEach(r => { r.estimatedPace = Math.round(r.estimatedPace * factor); });
+    showToast(choice === 'push' ? 'Paces tightened — go get it.' : 'Paces eased — listen to your body.', 'ok');
+  } else {
+    showToast('Staying the course. Keep up the great work.', 'ok');
+  }
+  state.midCheckInDismissed = true;
+  saveState(); renderMainContent();
+}
+
+export function handleSaveRaceResult() {
+  const timeStr = document.getElementById('race-result-time')?.value.trim();
+  const notes   = document.getElementById('race-result-notes')?.value.trim() || '';
+  const timeSecs = parseTimeSecs(timeStr);
+  if (!timeSecs) { showToast('Enter a valid finish time (e.g. 1:58:42)', 'warn'); return; }
+  if (!state.raceResult) state.raceResult = {};
+  state.raceResult.timeSecs = timeSecs;
+  state.raceResult.notes    = notes;
+  saveState();
+  closeModal();
+  renderMainContent();
+  showToast('Race result saved!', 'ok');
+}
+
 export function handleDeleteRun(id) {
   const r = state.plan.find(x => x.id === id);
   if (!r) return;

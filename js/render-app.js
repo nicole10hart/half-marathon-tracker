@@ -1,6 +1,6 @@
 import { state, saveState } from './state.js';
-import { dStr, fmtPace, esc } from './utils.js';
-import { getCurrentWeek, getPlanTotalWeeks } from './plan-generator.js';
+import { dStr, fmtPace, fmtSecs, parseTimeSecs, esc } from './utils.js';
+import { getCurrentWeek, getPlanTotalWeeks, estimateHalf, getTrainingProjection } from './plan-generator.js';
 import { renderPlanHTML, setupDragListeners } from './render-plan.js';
 import { renderStatsHTML } from './render-stats.js';
 import { WARMUP_EXERCISES, COOLDOWN_EXERCISES, COOLDOWN_ROUTINES } from './constants.js';
@@ -322,11 +322,221 @@ function renderInjuriesHTML() {
     </div>`;
 }
 
+// ---- Weekly Recap helpers ----
+
+function buildWeekRecap(week) {
+  const runs    = state.plan.filter(r => r.week === week && !r.userAdded);
+  const planned = runs.reduce((s, r) => s + r.distance, 0);
+  const done    = runs.filter(r => r.completed).reduce((s, r) => s + (r.actualDistance ?? r.distance), 0);
+  const nDone   = runs.filter(r => r.completed).length;
+  const nTotal  = runs.length;
+  const adh     = planned > 0 ? Math.round(done / planned * 100) : 0;
+  const paces   = runs.filter(r => r.completed && r.actualPace).map(r => r.actualPace);
+  const bestPace = paces.length ? Math.min(...paces) : null;
+  return { planned, done, nDone, nTotal, adh, bestPace };
+}
+
+function recapMsg(adh) {
+  if (adh >= 95) return 'Excellent execution — you nailed this week.';
+  if (adh >= 80) return 'Solid week. Consistency is how races are won.';
+  if (adh >= 60) return 'Some bumps, but you showed up. Keep it going.';
+  return 'A tough week. Tomorrow is a fresh start.';
+}
+
+function renderWeeklyRecapCard(prevWeek) {
+  const { planned, done, nDone, nTotal, adh, bestPace } = buildWeekRecap(prevWeek);
+  if (!nTotal) return '';
+  const adhColor = adh >= 80 ? 'var(--green)' : adh >= 60 ? 'var(--orange)' : 'var(--red)';
+  return `
+    <div class="stats-card recap-card">
+      <div class="recap-title">Week ${prevWeek} Recap</div>
+      <div class="recap-sub">Here's how last week went</div>
+      <div class="recap-stats">
+        <div>
+          <div class="recap-stat-val" style="color:${adhColor}">${adh}%</div>
+          <div class="recap-stat-lbl">adherence</div>
+        </div>
+        <div>
+          <div class="recap-stat-val">${nDone}/${nTotal}</div>
+          <div class="recap-stat-lbl">runs done</div>
+        </div>
+        <div>
+          <div class="recap-stat-val">${done.toFixed(1)}</div>
+          <div class="recap-stat-lbl">mi run</div>
+        </div>
+        ${bestPace ? `<div>
+          <div class="recap-stat-val">${fmtPace(bestPace)}</div>
+          <div class="recap-stat-lbl">best pace</div>
+        </div>` : '<div></div>'}
+      </div>
+      <div class="recap-msg">${recapMsg(adh)}</div>
+      <button class="btn btn-ghost btn-sm" onclick="dismissWeeklyRecap(${prevWeek})">Dismiss</button>
+    </div>`;
+}
+
+// ---- Mid-Plan Check-In helpers ----
+
+function renderMidCheckInCard() {
+  const totalWeeks  = getPlanTotalWeeks();
+  const curWeek     = getCurrentWeek();
+  const plannedRuns = state.plan.filter(r => !r.userAdded);
+  const planned     = plannedRuns.reduce((s, r) => s + r.distance, 0);
+  const done        = plannedRuns.filter(r => r.completed).reduce((s, r) => s + (r.actualDistance ?? r.distance), 0);
+  const adh         = planned > 0 ? Math.round(done / planned * 100) : 0;
+  const goalSecs    = estimateHalf(
+    parseTimeSecs(state.profile?.fiveKTime),
+    parseTimeSecs(state.profile?.tenKTime)
+  );
+  const projSecs    = getTrainingProjection();
+  const adhColor    = adh >= 80 ? 'var(--green)' : adh >= 60 ? 'var(--orange)' : 'var(--red)';
+
+  const goalRow = goalSecs
+    ? `<div class="checkin-stat"><div class="checkin-stat-val">${fmtSecs(goalSecs)}</div><div class="checkin-stat-lbl">goal time</div></div>`
+    : '';
+  const projRow = projSecs
+    ? `<div class="checkin-stat"><div class="checkin-stat-val">${fmtSecs(projSecs)}</div><div class="checkin-stat-lbl">training projection</div></div>`
+    : '';
+
+  return `
+    <div class="stats-card checkin-card">
+      <div class="checkin-title">Halfway Check-In</div>
+      <div class="checkin-sub">Week ${curWeek} of ${totalWeeks} — time to assess your training</div>
+      <div class="checkin-stats">
+        <div class="checkin-stat">
+          <div class="checkin-stat-val" style="color:${adhColor}">${adh}%</div>
+          <div class="checkin-stat-lbl">adherence</div>
+        </div>
+        ${goalRow}${projRow}
+      </div>
+      <div style="font-size:0.8rem;color:var(--t2);margin-bottom:12px">How do you feel about your current training load?</div>
+      <div class="checkin-actions">
+        <button class="btn btn-ghost btn-sm" onclick="midCheckInAction('push')" title="Reduce future paces by ~5%">Push Harder</button>
+        <button class="btn btn-primary btn-sm" onclick="midCheckInAction('stay')">Stay the Course</button>
+        <button class="btn btn-ghost btn-sm" onclick="midCheckInAction('ease')" title="Increase future paces by ~5%">Ease Off</button>
+      </div>
+    </div>`;
+}
+
+// ---- Race Day helpers ----
+
+const RACE_QUOTES = [
+  { text: 'The miracle isn\'t that I finished. The miracle is that I had the courage to start.', author: 'John Bingham' },
+  { text: 'Run when you can, walk if you have to, crawl if you must — just never give up.', author: 'Dean Karnazes' },
+  { text: 'Pain is temporary. Quitting lasts forever.', author: 'Lance Armstrong' },
+  { text: 'Champions are made from something deep inside — a desire, a dream, a vision.', author: 'Muhammad Ali' },
+  { text: 'You\'ve done the training. Trust your body. Today is your day.', author: '' },
+  { text: 'The race always hurts. Expect it to hurt. You don\'t train to make it not hurt. You train to make it hurt less.', author: 'Unknown' },
+];
+
+function pickQuote(raceDate) {
+  const hash = raceDate.replace(/-/g, '').split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+  return RACE_QUOTES[hash % RACE_QUOTES.length];
+}
+
+function renderRaceDayHTML() {
+  const profile  = state.profile;
+  const raceDate = profile?.raceDate;
+  const result   = state.raceResult;
+
+  const goalSecs = estimateHalf(
+    parseTimeSecs(profile?.fiveKTime),
+    parseTimeSecs(profile?.tenKTime)
+  );
+  const projSecs = getTrainingProjection();
+
+  // Post-result view
+  if (result?.timeSecs) {
+    const delta = result.timeSecs - (goalSecs || result.timeSecs);
+    const faster = delta <= 0;
+    const absDelta = Math.abs(delta);
+    const deltaLabel = goalSecs
+      ? `${faster ? '' : '+'}${faster ? '-' : ''}${fmtSecs(absDelta)} ${faster ? 'faster' : 'slower'} than goal`
+      : '';
+    return `
+      <div class="today-layout fade-in">
+        <div class="today-date-header">
+          <div class="today-weekday">Race Day</div>
+          <div class="today-dateline">${raceDate || ''}</div>
+        </div>
+        <div class="stats-card">
+          <div class="raceday-layout">
+            <div class="rd-result-banner">You did it!</div>
+            <div class="rd-result-time">${fmtSecs(result.timeSecs)}</div>
+            ${deltaLabel ? `<div class="rd-result-delta ${faster ? 'rd-delta-faster' : 'rd-delta-slower'}">${deltaLabel}</div>` : ''}
+            ${result.notes ? `<div class="rd-result-notes">"${esc(result.notes)}"</div>` : ''}
+            <div class="rd-result-actions">
+              <button class="btn btn-ghost full" onclick="openRaceResultModal(true)">Edit Result</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  // Pre-race view
+  const quote = pickQuote(raceDate || 'default');
+  const now   = new Date();
+  const dateLabel = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+  // Pacing strategy
+  let pacingHTML = '';
+  const racePaceSecs = goalSecs ? goalSecs / 13.1 : (projSecs ? projSecs / 13.1 : null);
+  if (racePaceSecs) {
+    const early  = fmtPace(Math.round(racePaceSecs * 1.03));
+    const mid    = fmtPace(Math.round(racePaceSecs));
+    const finish = fmtPace(Math.round(racePaceSecs * 0.97));
+    pacingHTML = `
+      <div class="rd-pacing">
+        <div class="rd-pacing-title">Pacing Strategy</div>
+        <div class="rd-pace-row"><span class="rd-pace-range">Miles 1–3</span><span class="rd-pace-val">${early}/mi</span></div>
+        <div class="rd-pace-row"><span class="rd-pace-range">Miles 4–10</span><span class="rd-pace-val">${mid}/mi</span></div>
+        <div class="rd-pace-row"><span class="rd-pace-range">Miles 11–13</span><span class="rd-pace-val">${finish}/mi</span></div>
+      </div>`;
+  }
+
+  const timesHTML = (goalSecs || projSecs) ? `
+    <div class="rd-times-grid">
+      ${goalSecs ? `<div class="rd-time-card"><div class="rd-time-val">${fmtSecs(goalSecs)}</div><div class="rd-time-lbl">Goal Time</div></div>` : ''}
+      ${projSecs ? `<div class="rd-time-card"><div class="rd-time-val">${fmtSecs(projSecs)}</div><div class="rd-time-lbl">Training Projection</div></div>` : ''}
+    </div>` : '';
+
+  return `
+    <div class="today-layout fade-in">
+      <div class="today-date-header">
+        <div class="today-weekday">${dateLabel}</div>
+      </div>
+      <div class="stats-card">
+        <div class="raceday-layout">
+          <div class="rd-banner">RACE DAY</div>
+          ${timesHTML}
+          ${pacingHTML}
+          <div class="rd-quote">
+            "${quote.text}"
+            ${quote.author ? `<div class="rd-quote-author">— ${quote.author}</div>` : ''}
+          </div>
+          <button class="btn btn-primary rd-log-btn" onclick="openRaceResultModal(false)">Log My Finish Time</button>
+        </div>
+      </div>
+    </div>`;
+}
+
 function renderTodayHTML() {
   const today = dStr(new Date());
   const now   = new Date();
+
+  // Race day check — replace entire Today tab
+  if (state.profile?.raceDate === today) return renderRaceDayHTML();
+
   const weekday = now.toLocaleDateString('en-US', { weekday: 'long' });
   const dateLabel = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+  const curWeek    = getCurrentWeek();
+  const totalWeeks = getPlanTotalWeeks();
+
+  // Weekly recap: show when entering a new week (curWeek > 1) and not yet dismissed
+  const showRecap = curWeek > 1 && state.weeklyRecapDismissed !== curWeek - 1;
+
+  // Mid-plan check-in: show once when past the plan midpoint and not dismissed
+  const showMidCheckIn = curWeek >= Math.ceil(totalWeeks / 2) && !state.midCheckInDismissed;
 
   // Today's run(s) from plan
   const todayRuns = state.plan.filter(r => r.date === today);
@@ -354,15 +564,12 @@ function renderTodayHTML() {
     </div>`).join('');
 
   // This week summary
-  const curWeek    = getCurrentWeek();
-  const totalWeeks = getPlanTotalWeeks();
-  const weekRuns   = state.plan.filter(r => r.week === curWeek);
-  const miAll      = weekRuns.reduce((s,r) => s + r.distance, 0);
-  const miComp     = weekRuns.filter(r => r.completed).reduce((s,r) => s + (r.actualDistance ?? r.distance), 0);
-  const ctWeek     = (state.crossTraining || []).filter(ct => {
+  const weekRuns = state.plan.filter(r => r.week === curWeek);
+  const miAll    = weekRuns.reduce((s,r) => s + r.distance, 0);
+  const miComp   = weekRuns.filter(r => r.completed).reduce((s,r) => s + (r.actualDistance ?? r.distance), 0);
+  const ctWeek   = (state.crossTraining || []).filter(ct => {
     const weekRun = weekRuns[0];
     if (!weekRun) return false;
-    // Include CT entries within the same calendar week
     const mon = new Date(now); mon.setDate(now.getDate() - now.getDay());
     const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
     const d = new Date(ct.date + 'T00:00:00');
@@ -381,41 +588,18 @@ function renderTodayHTML() {
         <div class="today-dateline">${dateLabel}</div>
       </div>
 
+      ${showRecap ? renderWeeklyRecapCard(curWeek - 1) : ''}
+      ${showMidCheckIn ? renderMidCheckInCard() : ''}
+
       <div class="stats-card">
         <div class="sc-title">Today's Run</div>
         ${runSection}
         <button class="btn btn-ghost btn-sm" style="margin-top:12px" onclick="openDayCellPicker('${today}')">+ Add Activity</button>
       </div>
 
-      ${state.profile?.planType === 'punishment'
-        ? `<div class="stats-card punishment-block">
-             <div class="pb-icon">X</div>
-             <div class="pb-body">
-               <div class="pb-title">Pre-Run Warm-Up</div>
-               <div class="pb-taunt">Warm-ups are for the weak. Stop stalling and start running.</div>
-             </div>
-           </div>`
-        : todayRunType ? renderWarmupHTML(todayRunType) : ''}
-
-      ${state.profile?.planType === 'punishment'
-        ? `<div class="stats-card punishment-block">
-             <div class="pb-icon">X</div>
-             <div class="pb-body">
-               <div class="pb-title">Post-Run Cool-Down</div>
-               <div class="pb-taunt">Cool-downs are for the weak. Walk it off on your own time.</div>
-             </div>
-           </div>`
-        : todayRunType ? renderCooldownHTML(todayRunType) : ''}
-
-      ${state.profile?.planType === 'punishment'
-        ? `<div class="stats-card punishment-block">
-             <div class="pb-icon">X</div>
-             <div class="pb-body">
-               <div class="pb-title">Injuries</div>
-               <div class="pb-taunt">Injuries are for the weak. Pain is just weakness leaving the body. Run through it.</div>
-             </div>
-           </div>`
-        : renderInjuriesHTML()}
+      ${todayRunType ? renderWarmupHTML(todayRunType) : ''}
+      ${todayRunType ? renderCooldownHTML(todayRunType) : ''}
+      ${renderInjuriesHTML()}
 
       <div class="stats-card">
         <div class="sc-title" style="margin-bottom:${ctToday.length ? '10px' : '0'}">Cross Training Today</div>
@@ -449,12 +633,28 @@ function renderTodayHTML() {
   `;
 }
 
+export function shareReadOnlyUrl() {
+  const { name, planType, raceDate, startDate, daysPerWeek, longRunDay } = state.profile || {};
+  const data = {
+    profile: { name, planType, raceDate, startDate, daysPerWeek, longRunDay },
+    plan: (state.plan || []).map(({ id, date, type, distance, estimatedPace,
+      completed, skipped, week, label, actualDistance, actualPace }) =>
+      ({ id, date, type, distance, estimatedPace, completed, skipped, week, label, actualDistance, actualPace }))
+  };
+  const encoded = btoa(encodeURIComponent(JSON.stringify(data)));
+  const url = `${window.location.origin}${window.location.pathname}?share=${encoded}`;
+  navigator.clipboard.writeText(url).then(() => {
+    import('./feedback.js').then(m => m.showToast('Share link copied!', 'ok'));
+  });
+}
+
 export function renderMainContent() {
   const main = document.getElementById('main-content');
   if (!main) return;
   if (state.view === 'plan') {
     main.innerHTML = renderPlanHTML();
-    setupDragListeners();
+    if (state.readOnly) main.firstElementChild?.classList.add('readonly-plan');
+    else setupDragListeners();
   } else if (state.view === 'today') {
     main.innerHTML = renderTodayHTML();
   } else {
@@ -479,12 +679,41 @@ export function renderApp() {
   const nav = document.getElementById('app-nav');
   nav.style.display = 'flex';
 
+  // Read-only mode: single tab, no edit controls, banner above content
+  if (state.readOnly) {
+    document.getElementById('nav-tabs').innerHTML = `
+      <button class="nav-tab active">Plan</button>
+    `;
+    document.getElementById('nav-right').innerHTML = `<span class="ro-badge">Read Only</span>`;
+    if (!document.querySelector('.ro-banner')) {
+      const p = state.profile;
+      const planLabel = { training: 'Training', punishment: 'Punishment' }[p.planType] || (p.planType ? p.planType.charAt(0).toUpperCase() + p.planType.slice(1) : 'Training');
+      const raceLine = p.raceDate
+        ? new Date(p.raceDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+        : null;
+      const banner = document.createElement('div');
+      banner.className = 'ro-banner';
+      banner.innerHTML = `
+        <div class="ro-banner-eyebrow">Shared Training Plan</div>
+        <div class="ro-banner-name">${esc(p.name || 'Training Plan')}</div>
+        <div class="ro-banner-meta">${esc(planLabel)} Plan${raceLine ? ` &nbsp;·&nbsp; Race: ${raceLine}` : ''}</div>
+      `;
+      document.getElementById('main-content').before(banner);
+    }
+    renderMainContent();
+    return;
+  }
+
   document.getElementById('nav-tabs').innerHTML = `
     <button class="nav-tab ${state.view==='today'?'active':''}" onclick="switchView('today')">Today</button>
     <button class="nav-tab ${state.view==='plan'?'active':''}" onclick="switchView('plan')"><span class="tab-full">Training Plan</span><span class="tab-abbr">Plan</span></button>
     <button class="nav-tab ${state.view==='stats'?'active':''}" onclick="switchView('stats')"><span class="tab-full">Stats &amp; Progress</span><span class="tab-abbr">Stats</span></button>
   `;
+  const _planType = state.profile.planType || 'training';
+  const _planDisplay = { training: 'Training', punishment: 'Punishment' }[_planType] || (_planType.charAt(0).toUpperCase() + _planType.slice(1));
   document.getElementById('nav-right').innerHTML = `
+    <span class="nav-plan-type${_planType === 'punishment' ? ' nav-plan-type--punishment' : ''}">${_planDisplay}</span>
+    <button class="btn btn-ghost" onclick="shareReadOnlyUrl()">↑<span class="btn-txt"> Share</span></button>
     <button class="btn btn-ghost" onclick="openEditProfile()">⚙<span class="btn-txt"> Settings</span></button>
     <button class="btn btn-ghost" onclick="resetConfirm()">↺<span class="btn-txt"> Reset</span></button>
   `;
